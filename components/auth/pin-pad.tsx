@@ -54,8 +54,8 @@ export function PinPad({
         ))}
       </motion.div>
 
-      {/* 键盘 */}
-      <div className="grid w-full max-w-[280px] grid-cols-3 gap-3">
+      {/* 键盘：每个键为圆角正方形（aspect-square 保证宽高相等） */}
+      <div className="grid w-full max-w-[268px] grid-cols-3 gap-3">
         {KEYS.map((k, i) =>
           k === '' ? (
             <span key={i} />
@@ -65,8 +65,10 @@ export function PinPad({
               type="button"
               onClick={() => press(k)}
               className={cn(
-                'flex h-16 items-center justify-center rounded-2xl text-2xl font-medium text-ink',
-                k === 'del' ? 'mf-pressable text-secondary' : 'mf-raised mf-pressable',
+                'flex aspect-square w-full items-center justify-center rounded-3xl text-2xl font-medium text-ink',
+                k === 'del'
+                  ? 'mf-pressable text-secondary'
+                  : 'mf-raised mf-pressable',
               )}
             >
               {k === 'del' ? <Delete className="h-6 w-6" /> : k}
