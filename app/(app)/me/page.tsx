@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Settings, LogOut } from 'lucide-react'
+import { Settings, LogOut, Pencil } from 'lucide-react'
 import { requireUser } from '@/lib/auth/user'
 import { getSettings } from '@/lib/settings'
 import { logout } from '@/lib/actions/auth'
@@ -8,6 +8,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ChangePassword } from '@/components/me/change-password'
+import { EditProfile } from '@/components/me/edit-profile'
 import { LanguageSwitch } from '@/components/language-switch'
 import { getT } from '@/lib/i18n/server'
 
@@ -22,20 +23,25 @@ export default async function MePage() {
     <>
       <PageHeader title={t('me.title')} />
 
-      <div className="mf-raised mb-5 flex items-center gap-4 p-5">
-        <Avatar
-          name={user.name}
-          src={user.avatarPath ? `/api/uploads/${user.avatarPath}` : null}
-          size={56}
-        />
-        <div className="relative">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold text-ink">{user.name}</span>
-            {user.isAdmin && <Badge tone="accent">{t('me.admin')}</Badge>}
+      <EditProfile name={user.name} avatarPath={user.avatarPath}>
+        <button className="mf-raised mf-pressable mb-5 flex w-full items-center gap-4 p-5 text-left">
+          <Avatar
+            name={user.name}
+            src={user.avatarPath ? `/api/uploads/${user.avatarPath}` : null}
+            size={56}
+          />
+          <div className="relative flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold text-ink">
+                {user.name}
+              </span>
+              {user.isAdmin && <Badge tone="accent">{t('me.admin')}</Badge>}
+            </div>
+            <p className="text-sm text-secondary">{s.familyName}</p>
           </div>
-          <p className="text-sm text-secondary">{s.familyName}</p>
-        </div>
-      </div>
+          <Pencil className="relative h-4 w-4 shrink-0 text-secondary" />
+        </button>
+      </EditProfile>
 
       <div className="space-y-3">
         {/* 语言切换 */}
