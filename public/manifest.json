@@ -1,0 +1,17 @@
+{
+  "name": "干饭厨子",
+  "short_name": "干饭厨子",
+  "description": "可自部署到 NAS 的家庭点菜系统",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f6f4",
+  "theme_color": "#f4f6f4",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

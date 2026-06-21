@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1782056387600,
+      "tag": "0000_material_crusher_hogan",
+      "breakpoints": true
+    }
+  ]
+}
