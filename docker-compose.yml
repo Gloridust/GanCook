@@ -1,0 +1,17 @@
+services:
+  gancook:
+    # 默认用 Docker Hub 镜像（国内飞牛等 NAS 有加速）。升级只需 docker compose pull && up -d
+    image: gloridust/gancook:latest
+    # 海外/或偏好 GHCR：ghcr.io/gloridust/gancook:latest
+    # 本地自行构建：注释 image 一行，取消下一行注释
+    # build: .
+    container_name: gancook
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    volumes:
+      # 唯一需要关心的东西：数据目录（SQLite + 上传图片）。备份只需复制 ./data
+      - ./data:/data
+    environment:
+      # 全部可选。开箱即用，无需配置任何密钥（首次启动自动生成并持久化到 ./data）。
+      TZ: Asia/Shanghai

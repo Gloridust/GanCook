@@ -1,0 +1,49 @@
+# 干饭厨子 GanCook — 多阶段构建，输出单容器 standalone 运行包
+# bookworm-slim (glibc) 以保证 better-sqlite3 / sharp 原生模块兼容
+
+# ---------- 依赖 ----------
+FROM node:22-bookworm-slim AS deps
+WORKDIR /app
+# 编译 better-sqlite3 原生模块所需工具（若无预编译包则现编）
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# ---------- 构建 ----------
+FROM node:22-bookworm-slim AS builder
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+
+# ---------- 运行 ----------
+FROM node:22-bookworm-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0 \
+    DATA_DIR=/data \
+    TZ=Asia/Shanghai
+
+# 非 root 运行
+RUN groupadd -r app && useradd -r -g app app
+
+# standalone 运行包 + 静态资源 + public + 迁移文件
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/drizzle ./drizzle
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+
+# 数据卷：SQLite 与上传图片
+RUN chmod +x /app/docker-entrypoint.sh \
+    && mkdir -p /data && chown -R app:app /data /app
+VOLUME /data
+USER app
+
+EXPOSE 3000
+# 入口脚本自动生成密钥（开箱即用），instrumentation 启动时自动迁移数据库并拉起调度
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
