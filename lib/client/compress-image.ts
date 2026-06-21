@@ -1,35 +1,54 @@
 'use client'
 
+const MAX_BYTES = 2 * 1024 * 1024 // 2MB 上限
+
 /**
- * 上传前在浏览器端把图片降采样到长边 ≤ maxSide，导出为 jpeg Blob。
- * 服务端 sharp 还会再压一次转 webp；这一步主要为了减小上传体积。
+ * 上传前在浏览器端压缩图片：
+ * - 长边降采样到 maxSide
+ * - 导出 jpeg，并循环降低质量/尺寸直到 ≤ 2MB
+ * 服务端 sharp 还会再转 webp；这一步保证上传体积可控、加载更快。
  */
 export async function compressImage(
-  file: File,
+  file: Blob,
   maxSide = 1600,
   quality = 0.85,
+  maxBytes = MAX_BYTES,
 ): Promise<Blob> {
   if (!file.type.startsWith('image/')) return file
   const bitmap = await createImageBitmap(file).catch(() => null)
   if (!bitmap) return file
 
-  let { width, height } = bitmap
-  if (width > maxSide || height > maxSide) {
-    const scale = maxSide / Math.max(width, height)
-    width = Math.round(width * scale)
-    height = Math.round(height * scale)
+  const baseMax = Math.max(bitmap.width, bitmap.height)
+
+  const render = (side: number, q: number): Promise<Blob | null> => {
+    const scale = Math.min(1, side / baseMax)
+    const w = Math.max(1, Math.round(bitmap.width * scale))
+    const h = Math.max(1, Math.round(bitmap.height * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return Promise.resolve(null)
+    ctx.drawImage(bitmap, 0, 0, w, h)
+    return new Promise((res) => canvas.toBlob(res, 'image/jpeg', q))
   }
 
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return file
-  ctx.drawImage(bitmap, 0, 0, width, height)
-  bitmap.close?.()
+  let side = maxSide
+  let q = quality
+  let out = await render(side, q)
 
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, 'image/jpeg', quality),
-  )
-  return blob ?? file
+  // 循环收敛到 2MB 以内
+  while (out && out.size > maxBytes) {
+    if (q > 0.5) {
+      q -= 0.15
+    } else if (side > 640) {
+      side = Math.round(side * 0.82)
+    } else {
+      break // 已到下限，尽力而为
+    }
+    out = await render(side, q)
+  }
+
+  bitmap.close?.()
+  return out ?? file
 }

@@ -31,6 +31,7 @@
     "node-cron": "^3.0.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-easy-crop": "^5.5.7",
     "sharp": "^0.33.5",
     "tailwind-merge": "^2.6.0",
     "zod": "^3.24.1"

@@ -43,7 +43,7 @@ export async function deleteImage(relPath: string | null | undefined) {
 /** 校验并读取上传文件为 Buffer（限制类型与大小） */
 export async function fileToBuffer(
   file: File,
-  maxBytes = 12 * 1024 * 1024,
+  maxBytes = 5 * 1024 * 1024,
 ): Promise<Buffer> {
   // 抛出稳定错误码，由调用方按语言翻译
   if (!file.type.startsWith('image/')) throw new Error('IMAGE_ONLY')

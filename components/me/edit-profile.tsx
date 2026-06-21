@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/ui/avatar'
+import { ImageCropper } from '@/components/ui/image-cropper'
 import { useT } from '@/components/i18n-provider'
 import { compressImage } from '@/lib/client/compress-image'
 import { updateProfile } from '@/lib/actions/profile'
@@ -35,15 +36,22 @@ export function EditProfile({
   const [preview, setPreview] = useState<string | null>(
     avatarPath ? `/api/uploads/${avatarPath}` : null,
   )
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [pending, startTransition] = useTransition()
 
-  const pick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const pick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
     if (!f) return
-    const compressed = await compressImage(f, 512)
+    setCropSrc(URL.createObjectURL(f))
+    e.target.value = '' // 允许再次选同一文件
+  }
+
+  const onCropped = async (cropped: Blob) => {
+    const compressed = await compressImage(cropped, 512)
     setBlob(compressed)
     setPreview(URL.createObjectURL(compressed))
+    setCropSrc(null)
   }
 
   const submit = () => {
@@ -62,6 +70,7 @@ export function EditProfile({
   }
 
   return (
+    <>
     <Dialog
       open={open}
       onOpenChange={(o) => {
@@ -128,5 +137,16 @@ export function EditProfile({
         </div>
       </DialogContent>
     </Dialog>
+
+      {cropSrc && (
+        <ImageCropper
+          src={cropSrc}
+          aspect={1}
+          maxSide={512}
+          onCancel={() => setCropSrc(null)}
+          onConfirm={onCropped}
+        />
+      )}
+    </>
   )
 }
