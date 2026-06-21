@@ -134,3 +134,10 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# GanCook 运行时数据（SQLite + 上传图片）
+/data
+data/
+
+# 本地环境变量保留 example
+!.env.example
