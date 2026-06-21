@@ -71,8 +71,8 @@ const zh: Messages = {
   'home.hi': '你好，{name}',
   'home.sub': '{family} · 今天想吃点什么？',
   'home.openMeal': '开饭局',
-  'home.today': '今天的饭局',
-  'home.emptyToday': '今天还没有饭局，开一顿叫上家人点菜吧',
+  'home.upcoming': '临近的饭局',
+  'home.emptyUpcoming': '最近几天还没有饭局，开一顿叫上家人点菜吧',
   'home.viewAll': '查看全部饭局',
   // meals list
   'meals.title': '饭局',
@@ -285,8 +285,9 @@ const en: Messages = {
   'home.hi': 'Hi, {name}',
   'home.sub': "{family} · What's for today?",
   'home.openMeal': 'New meal',
-  'home.today': "Today's meals",
-  'home.emptyToday': 'No meals today — start one and invite the family',
+  'home.upcoming': 'Upcoming meals',
+  'home.emptyUpcoming':
+    'No meals in the next few days — start one and invite the family',
   'home.viewAll': 'View all meals',
   'meals.title': 'Meals',
   'meals.emptyTitle': 'No meals yet',

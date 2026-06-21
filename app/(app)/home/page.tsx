@@ -23,10 +23,26 @@ export default async function HomePage() {
   const today = todayLocal(tz)
   const tomorrow = dayjs(today).add(1, 'day').format('YYYY-MM-DD')
 
+  // 临近的饭局：最近 3 天（含今天）的未完成饭局 + 今天已完成的饭局
+  const in3days = dayjs(today).add(2, 'day').format('YYYY-MM-DD')
   const meals = listMeals()
-  const todayMeals = meals
-    .filter((m) => m.date === today && m.status !== 'cancelled')
-    .sort((a, b) => a.diningTime - b.diningTime)
+  const upcomingMeals = meals
+    .filter((m) => {
+      if (m.status === 'cancelled') return false
+      if (
+        (m.status === 'ordering' || m.status === 'cooking') &&
+        m.date >= today &&
+        m.date <= in3days
+      )
+        return true
+      if (m.status === 'done' && m.date === today) return true
+      return false
+    })
+    .sort(
+      (a, b) =>
+        (a.status === 'done' ? 1 : 0) - (b.status === 'done' ? 1 : 0) ||
+        a.diningTime - b.diningTime,
+    )
 
   const orderRows = db
     .select({ mealId: orders.mealId, userId: orders.userId })
@@ -54,12 +70,14 @@ export default async function HomePage() {
         }
       />
 
-      <h2 className="mb-3 text-base font-semibold text-ink">{t('home.today')}</h2>
-      {todayMeals.length === 0 ? (
+      <h2 className="mb-3 text-base font-semibold text-ink">
+        {t('home.upcoming')}
+      </h2>
+      {upcomingMeals.length === 0 ? (
         <Card className="flex flex-col items-center gap-3 py-8 text-center">
           <UtensilsCrossed className="relative h-8 w-8 text-secondary/50" />
           <p className="relative text-sm text-secondary">
-            {t('home.emptyToday')}
+            {t('home.emptyUpcoming')}
           </p>
           <CreateMealDialog today={today} tomorrow={tomorrow}>
             <Button size="sm" className="relative">
@@ -70,7 +88,7 @@ export default async function HomePage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {todayMeals.map((m) => (
+          {upcomingMeals.map((m) => (
             <MealCard
               key={m.id}
               meal={m}

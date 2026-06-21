@@ -28,7 +28,7 @@ export async function MealCard({
 }) {
   const t = await getT()
   const status = STATUS_META[meal.status]
-  const fallbackTitle = `${fmtDateLabel(meal.date, tz!, t)} ${t('meal.' + meal.mealType)}`
+  const fallbackTitle = t('meal.' + meal.mealType)
   return (
     <Link href={`/meals/${meal.id}`} className="mf-raised mf-pressable block p-4">
       <div className="relative flex items-center gap-3">
@@ -45,7 +45,7 @@ export async function MealCard({
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-secondary">
             <span className="inline-flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
-              {fmtTime(meal.diningTime, tz)}
+              {fmtDateLabel(meal.date, tz!, t)} {fmtTime(meal.diningTime, tz)}
             </span>
             {typeof participants === 'number' && participants > 0 && (
               <span className="inline-flex items-center gap-1">
