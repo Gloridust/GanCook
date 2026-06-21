@@ -52,7 +52,7 @@ export function LoginForm({
     <div className="flex w-full max-w-sm flex-col items-center">
       <div className="mf-raised mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl">
         <Image
-          src="/logo.jpg"
+          src="/logo.webp"
           alt="干饭厨子"
           width={80}
           height={80}

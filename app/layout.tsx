@@ -6,7 +6,13 @@ import { getLocale, getMessages } from '@/lib/i18n/server'
 export const metadata: Metadata = {
   title: '干饭厨子 · GanCook',
   description: '可自部署到 NAS 的家庭点菜系统 · 让每一顿饭都充满期待',
-  icons: { icon: '/logo.jpg', apple: '/logo.jpg' },
+  icons: {
+    icon: [
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/logo.webp', type: 'image/webp' },
+    ],
+    apple: '/apple-icon.png',
+  },
   manifest: '/manifest.json',
 }
 
