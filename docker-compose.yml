@@ -12,6 +12,11 @@ services:
     volumes:
       # 唯一需要关心的东西：数据目录（SQLite + 上传图片）。备份只需复制 ./data
       - ./data:/data
+      # 可选：启用「网页端一键更新」。挂载 Docker 套接字后，管理员可在
+      # 「家庭管理 → 关于与更新」里点按钮自动拉新镜像并重建容器。
+      # 需要访问套接字的权限，最简单是配合下面的 user: root（注意这会以 root 运行）。
+      # - /var/run/docker.sock:/var/run/docker.sock
+    # user: root            # 仅当启用上面的套接字挂载、需要一键更新时取消注释
     environment:
       # 全部可选。开箱即用，无需配置任何密钥（首次启动自动生成并持久化到 ./data）。
       TZ: Asia/Shanghai
