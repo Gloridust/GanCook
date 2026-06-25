@@ -28,6 +28,10 @@ ENV NODE_ENV=production \
     DATA_DIR=/data \
     TZ=Asia/Shanghai
 
+# 版本号（由 CI 构建参数注入，用于「关于与更新」展示与比对）
+ARG APP_VERSION=dev
+ENV APP_VERSION=$APP_VERSION
+
 # 非 root 运行
 RUN groupadd -r app && useradd -r -g app app
 
