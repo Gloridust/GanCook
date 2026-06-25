@@ -77,7 +77,7 @@ export default async function WallPage() {
           {/* 图例 */}
           <div className="flex items-center justify-end gap-1.5 pr-1 text-xs text-secondary">
             <span>{t('wall.less')}</span>
-            {[0, 0.28, 0.5, 0.72, 1].map((a, i) => (
+            {[0, 0.42, 0.62, 0.82, 1].map((a, i) => (
               <span
                 key={i}
                 className="h-[11px] w-[11px] rounded-[3px]"

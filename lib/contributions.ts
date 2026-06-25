@@ -44,7 +44,7 @@ export function getContributions(): {
 } {
   const tz = getSettings().timezone
   const today = todayLocal(tz)
-  const weeks = 26
+  const weeks = 18 // 适配手机宽度，整图免横向滚动，最近活动始终可见
 
   const members = listMembers()
   if (members.length === 0) return { members: [], today, weeks }

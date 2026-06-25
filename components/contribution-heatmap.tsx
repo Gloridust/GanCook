@@ -1,6 +1,6 @@
 import { dayjs } from '@/lib/time'
 
-const LEVEL_ALPHA = [0, 0.28, 0.5, 0.72, 1]
+const LEVEL_ALPHA = [0, 0.42, 0.62, 0.82, 1]
 
 function level(count: number): number {
   if (count <= 0) return 0
