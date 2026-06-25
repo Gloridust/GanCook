@@ -10,8 +10,12 @@ services:
     ports:
       - '3000:3000'
     volumes:
-      # 唯一需要关心的东西：数据目录（SQLite + 上传图片）。备份只需复制 ./data
+      # 数据目录（SQLite + 上传图片）。备份只需复制 ./data
       - ./data:/data
+      # Docker 套接字：启用「家庭管理 → 关于与更新」的网页端一键更新（默认开启）。
+      # 容器内会让非 root 的 app 用户加入套接字所属组来访问；权限/路径不符时会自动
+      # 降级为「显示手动更新命令」。若你的环境没有 Docker 守护进程或不想要此功能，删掉这行即可。
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       # 全部可选。开箱即用，无需配置任何密钥（首次启动自动生成并持久化到 ./data）。
       TZ: Asia/Shanghai

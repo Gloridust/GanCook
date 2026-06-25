@@ -100,7 +100,7 @@ export function EditProfile({
             ) : (
               <Avatar name={name || initName} size={96} />
             )}
-            <span className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-accent-strong text-white shadow-[0_2px_6px_rgba(47,122,72,0.4)]">
+            <span className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full border-2 border-tint bg-accent-strong text-white">
               <Camera className="h-4 w-4" />
             </span>
           </button>

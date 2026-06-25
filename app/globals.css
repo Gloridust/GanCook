@@ -20,6 +20,7 @@
   --mf-accent-strong: #3c9157; /* 按钮填充（更深，白字更清晰） */
   --mf-accent-deep: #2f7a48; /* 渐变暗端 */
   --mf-accent-soft: 78 169 107; /* RGB，用于淡色底/热力图 */
+  --mf-tint: #e7f2ea; /* 青菜绿淡色调面（tonal surface / 图标色块底） */
 
   /* 文字 */
   --mf-ink: #1f2a22; /* 主文字 */
@@ -45,6 +46,7 @@
     --mf-accent-strong: #4ea96b;
     --mf-accent-deep: #3c9157;
     --mf-accent-soft: 111 196 136;
+    --mf-tint: #1d2a21;
     --mf-ink: #eef2ec;
     --mf-secondary: #9aa89d;
     --mf-highlight: 255 255 255;
@@ -58,9 +60,11 @@
   --color-trough: var(--mf-trough);
   --color-accent: var(--mf-accent);
   --color-accent-strong: var(--mf-accent-strong);
+  --color-tint: var(--mf-tint);
   --color-ink: var(--mf-ink);
   --color-secondary: var(--mf-secondary);
   --color-danger: var(--mf-danger);
+  --color-warn: var(--mf-warn);
   --radius-mf: var(--radius);
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei',
@@ -86,40 +90,25 @@ body {
   letter-spacing: -0.02em;
 }
 
-/* ── 原子：被布盖住的浮起物体 ───────────────────────────── */
+/* ── 扁平卡片（发丝描边，无阴影无高光）── */
 .mf-raised {
   background: var(--mf-surface);
+  border: 1px solid rgba(var(--mf-shadow) / 0.1);
   border-radius: var(--radius);
   position: relative;
-  box-shadow:
-    0 1px 3px rgba(var(--mf-shadow) / 0.45),
-    0 2px 8px rgba(var(--mf-shadow) / 0.22);
-}
-.mf-raised::before {
-  /* 布料顶面高光：radial，中心偏上 */
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(
-    ellipse at 50% 30%,
-    rgb(var(--mf-highlight) / 0.5) 0%,
-    rgb(var(--mf-highlight) / 0.14) 35%,
-    transparent 72%
-  );
-  pointer-events: none;
 }
 
-/* 可按压的浮起物（按钮/可点行） */
+/* 选中凸起（Tab / 分段 / 键盘按键）——唯一保留的轻微上浮 */
+.mf-bump {
+  background: var(--mf-surface);
+  box-shadow: 0 1px 4px rgba(var(--mf-shadow) / 0.18);
+}
+
+/* 可按压：仅做缩放反馈（扁平，不改阴影） */
 .mf-pressable {
-  transition:
-    box-shadow 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
-    transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .mf-pressable:active {
-  box-shadow:
-    0 1px 2px rgba(var(--mf-shadow) / 0.3),
-    0 1px 3px rgba(var(--mf-shadow) / 0.15);
   transform: scale(0.98);
 }
 
@@ -147,25 +136,10 @@ body {
   box-shadow: inset 0 1px 2px rgba(var(--mf-shadow) / 0.18);
 }
 
-/* 主要按钮填充（青菜绿渐变 + 白色顶面 sheen） */
+/* 主要按钮填充（青菜绿实色，扁平） */
 .mf-accent-fill {
-  background: linear-gradient(
-    180deg,
-    var(--mf-accent-strong) 0%,
-    var(--mf-accent-deep) 100%
-  );
+  background: var(--mf-accent-strong);
   color: #fff;
-  box-shadow:
-    0 1px 3px rgba(var(--mf-accent-soft) / 0.5),
-    0 3px 10px rgba(var(--mf-accent-soft) / 0.3);
-}
-.mf-accent-fill::before {
-  background: radial-gradient(
-    ellipse at 50% 22%,
-    rgb(255 255 255 / 0.35) 0%,
-    rgb(255 255 255 / 0.08) 40%,
-    transparent 70%
-  );
 }
 
 /* ── Dialog / Sheet 动画（替代 tailwindcss-animate） ── */
@@ -195,6 +169,73 @@ body {
   .mf-sheet[data-state='open'] {
     animation: mf-fade-in 0.2s ease;
   }
+}
+
+/* ── 设计 v2：分组列表 / 图标色块 / 色调面 / 描边 ── */
+
+/* iOS 内嵌分组列表：一个圆角容器，内部行用发丝线分隔 */
+.mf-list {
+  background: var(--mf-surface);
+  border: 1px solid rgba(var(--mf-shadow) / 0.1);
+  border-radius: 22px;
+  overflow: hidden;
+}
+.mf-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  text-align: left;
+}
+/* 行间发丝分隔线，从图标右侧起（iOS inset） */
+.mf-row + .mf-row {
+  box-shadow: inset 0 1px 0 rgba(var(--mf-shadow) / 0.1);
+}
+.mf-row + .mf-row.mf-row-inset {
+  box-shadow: inset 56px 1px 0 -55px rgba(var(--mf-shadow) / 0.1);
+}
+.mf-row-press {
+  transition: background-color 0.15s ease;
+}
+.mf-row-press:active {
+  background: rgba(var(--mf-shadow) / 0.05);
+}
+
+/* 图标色块（行/卡片的前导标识，青菜绿调） */
+.mf-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--mf-tint);
+  color: var(--mf-accent);
+  flex: none;
+}
+
+/* 色调面卡片（柔和绿底，用于 hero / 强调区块） */
+.mf-tonal {
+  background: var(--mf-tint);
+  border-radius: var(--radius);
+  position: relative;
+}
+
+/* 描边卡片（极简扁平，制造层次对比） */
+.mf-outline {
+  background: var(--mf-surface);
+  border: 1px solid rgba(var(--mf-shadow) / 0.12);
+  border-radius: var(--radius);
+}
+
+/* 区块小标题 */
+.mf-section {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--mf-secondary);
+  padding-left: 0.25rem;
 }
 
 /* 文字省略 */

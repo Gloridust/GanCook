@@ -22,7 +22,7 @@ export function EmptyState({
         className,
       )}
     >
-      <div className="mf-raised mb-5 flex h-24 w-24 items-center justify-center rounded-full">
+      <div className="mf-tonal mb-5 flex h-24 w-24 items-center justify-center rounded-full">
         <span className="relative text-accent [&_svg]:h-10 [&_svg]:w-10">
           {icon}
         </span>
