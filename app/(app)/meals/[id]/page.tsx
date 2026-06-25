@@ -11,6 +11,7 @@ import { MEAL_EMOJI, fmtTime, fmtDateLabel, deadlineText, nowSec } from '@/lib/t
 import { getT } from '@/lib/i18n/server'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { List, Row } from '@/components/ui/list'
 import { STATUS_META } from '@/components/meals/meal-card'
 import { MealControls } from '@/components/meals/meal-controls'
 import { OrderPicker } from '@/components/meals/order-picker'
@@ -81,7 +82,9 @@ export default async function MealDetailPage({
       {/* 信息卡 */}
       <div className="mf-raised mb-4 p-5">
         <div className="relative flex items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-trough text-3xl">
+          <div
+            className={`flex h-14 w-14 items-center justify-center rounded-2xl text-3xl ${status.tile}`}
+          >
             {MEAL_EMOJI[meal.mealType]}
           </div>
           <div>
@@ -171,36 +174,35 @@ export default async function MealDetailPage({
               : t('detail.noOrdersClosed')}
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <List>
             {dishGroups.map((g) => (
-              <div
+              <Row
                 key={g.name}
-                className="mf-raised flex items-center gap-3 p-3"
-              >
-                <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-trough">
-                  {g.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={`/api/uploads/${g.image}`}
-                      alt={g.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <Soup className="h-5 w-5 text-secondary/40" />
-                  )}
-                </div>
-                <div className="relative min-w-0 flex-1">
-                  <p className="font-medium text-ink">{g.name}</p>
-                  <p className="truncate text-xs text-secondary">
-                    {g.people.map((p) => p.name).join(t('common.listSep'))}
-                  </p>
-                </div>
-                <span className="relative shrink-0 rounded-full bg-[rgb(var(--mf-accent-soft)/0.15)] px-2.5 py-1 text-sm font-semibold text-accent">
-                  ×{g.people.length}
-                </span>
-              </div>
+                chevron={false}
+                leading={
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-trough">
+                    {g.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={`/api/uploads/${g.image}`}
+                        alt={g.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <Soup className="h-5 w-5 text-secondary/40" />
+                    )}
+                  </span>
+                }
+                title={g.name}
+                subtitle={g.people.map((p) => p.name).join(t('common.listSep'))}
+                trailing={
+                  <span className="rounded-full bg-[rgb(var(--mf-accent-soft)/0.15)] px-2.5 py-1 text-sm font-semibold text-accent">
+                    ×{g.people.length}
+                  </span>
+                }
+              />
             ))}
-          </div>
+          </List>
         )}
       </section>
 
