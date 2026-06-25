@@ -20,6 +20,7 @@ const buttonVariants = cva(
       variant: {
         primary: 'mf-accent-fill mf-pressable text-white',
         secondary: 'mf-raised mf-pressable text-accent',
+        tonal: 'mf-tonal mf-pressable text-accent',
         ghost: 'mf-pressable text-secondary hover:text-ink',
         danger:
           'mf-pressable text-white [background:linear-gradient(180deg,#e0605c,#c44440)] shadow-[0_2px_8px_rgba(217,83,79,0.35)]',

@@ -1,10 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { KeyRound } from 'lucide-react'
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogClose,
 } from '@/components/ui/dialog'
@@ -13,8 +11,14 @@ import { PinPad } from '@/components/auth/pin-pad'
 import { useT } from '@/components/i18n-provider'
 import { changePassword } from '@/lib/actions/auth'
 
-export function ChangePassword() {
-  const [open, setOpen] = useState(false)
+/** 受控弹窗：由父级（设置列表的某一行）控制开关 */
+export function ChangePassword({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (o: boolean) => void
+}) {
   const [step, setStep] = useState<'old' | 'new'>('old')
   const [oldPin, setOldPin] = useState('')
   const [newPin, setNewPin] = useState('')
@@ -35,18 +39,10 @@ export function ChangePassword() {
     <Dialog
       open={open}
       onOpenChange={(o) => {
-        setOpen(o)
+        onOpenChange(o)
         if (!o) reset()
       }}
     >
-      <DialogTrigger asChild>
-        <button className="mf-raised mf-pressable flex w-full items-center gap-3 p-4 text-left">
-          <KeyRound className="relative h-5 w-5 text-accent" />
-          <span className="relative text-[15px] text-ink">
-            {t('me.changePassword')}
-          </span>
-        </button>
-      </DialogTrigger>
       <DialogContent title={t('changepw.title')}>
         <div className="flex flex-col items-center pb-2">
           <p className="mb-6 text-sm text-secondary">
@@ -74,7 +70,7 @@ export function ChangePassword() {
                   if (res.ok) {
                     setMsg(t('changepw.updated'))
                     setError(false)
-                    setTimeout(() => setOpen(false), 800)
+                    setTimeout(() => onOpenChange(false), 800)
                   } else {
                     setError(true)
                     setMsg(res.error)
