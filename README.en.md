@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/logo.jpg" width="96" height="96" style="border-radius:22px" alt="GanCook" />
+<img src="public/logo.webp" width="96" height="96" alt="GanCook" />
 
 # 🍳 GanCook
 
@@ -26,6 +26,7 @@ all data lives on your own NAS.
 - 🚀 **Truly zero-config** — one `docker run`, no env vars to set; secrets are auto-generated & persisted on first boot.
 - 🗄️ **Single container + SQLite** — no external DB, no cloud. Backup = copy one `data` folder.
 - 👨‍👩‍👧 **One account, many roles** — no role at signup; anyone can cook or order. The cook is claimed **per meal**.
+- 👆 **Tap-to-login** — on a shared device, pick your avatar and enter a 6-digit code; no typing.
 - ⏰ **Auto meals (like alarms)** — add as many rules as you like: meal, time, how early to open, how early to close, and which weekdays. Auto-opens, auto-advances, auto-completes.
 - 🌱 **Contribution wall** — GitHub-style heatmaps for cooking & ordering.
 - 🖼️ **Fast images** — dish photos are compressed to WebP and stored on disk (no base64-in-DB).
