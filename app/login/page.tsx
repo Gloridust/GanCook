@@ -1,12 +1,14 @@
 import { redirect } from 'next/navigation'
-import { isSetupNeeded, listMembers } from '@/lib/auth/user'
+import { isSetupNeeded, listMembers, getCurrentUser } from '@/lib/auth/user'
 import { getSettings } from '@/lib/settings'
 import { LoginForm } from './login-form'
 
 export const dynamic = 'force-dynamic'
 
-export default function LoginPage() {
+export default async function LoginPage() {
   if (isSetupNeeded()) redirect('/setup')
+  // 已登录且用户存在 → 进首页（在页面里校验，避免 proxy 层死循环）
+  if (await getCurrentUser()) redirect('/home')
   const s = getSettings()
   const members = listMembers().map((m) => ({
     id: m.id,
