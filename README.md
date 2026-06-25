@@ -37,9 +37,38 @@
 
 ## 📸 预览
 
-> 首启创建管理员 → 添加菜品 → 开饭局点菜 → 认领做饭 → 餐后评价 → 贡献墙
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="doc/img/login.webp" alt="选头像登录" /><br/>
+      <b>👆 选头像登录</b><br/><sub>共享设备免打字，点头像 + 6 位密码</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="doc/img/home.webp" alt="临近的饭局" /><br/>
+      <b>🏠 临近的饭局</b><br/><sub>这几天吃什么、谁掌勺，一目了然</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="doc/img/meal.webp" alt="点菜 + 认领做饭" /><br/>
+      <b>🍽️ 点菜 · 认领做饭</b><br/><sub>勾选想吃的，「我来做这顿」</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="doc/img/review.webp" alt="谁点了什么 + 餐后打分" /><br/>
+      <b>⭐ 大家点了什么 · 打分</b><br/><sub>谁点了什么，吃完互相评价</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="doc/img/wall.webp" alt="贡献墙" /><br/>
+      <b>🌱 贡献墙</b><br/><sub>谁在为这个家默默下厨，绿格子见证</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="doc/img/admin.webp" alt="自动饭局规则" /><br/>
+      <b>⏰ 自动饭局（像设闹钟）</b><br/><sub>到点自动开局、截止、流转</sub>
+    </td>
+  </tr>
+</table>
 
-<!-- 截图占位：欢迎 PR 补充 docs/screenshots/ -->
+> 一条线把这些串起来：**前一晚自动开好明天的饭局 → 家人各自点菜 → 谁做饭点一下「我来做这顿」 → 吃完打个分 → 月底贡献墙上看看谁最辛苦**。
 
 ## 🚀 快速开始
 
