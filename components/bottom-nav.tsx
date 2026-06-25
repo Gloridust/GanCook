@@ -38,7 +38,7 @@ export function BottomNav() {
               {active && (
                 <motion.span
                   layoutId="nav-bump"
-                  className="mf-raised absolute inset-0 rounded-full"
+                  className="mf-bump absolute inset-0 rounded-full"
                   transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                 />
               )}

@@ -89,7 +89,7 @@ export function OrderPicker({
                   </div>
                 )}
                 {on && (
-                  <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-accent-strong text-white shadow-[0_2px_6px_rgba(47,122,72,0.4)]">
+                  <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-accent-strong text-white">
                     <Check className="h-4 w-4" strokeWidth={3} />
                   </span>
                 )}

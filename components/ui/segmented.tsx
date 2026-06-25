@@ -42,7 +42,7 @@ export function Segmented<T extends string>({
             {active && (
               <motion.span
                 layoutId={layoutId}
-                className="mf-raised absolute inset-0 rounded-full"
+                className="mf-bump absolute inset-0 rounded-full"
                 transition={{ type: 'spring', stiffness: 380, damping: 32 }}
               />
             )}

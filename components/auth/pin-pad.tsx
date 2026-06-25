@@ -68,7 +68,7 @@ export function PinPad({
                 'flex aspect-square w-full items-center justify-center rounded-3xl text-2xl font-medium text-ink',
                 k === 'del'
                   ? 'mf-pressable text-secondary'
-                  : 'mf-raised mf-pressable',
+                  : 'mf-bump mf-pressable',
               )}
             >
               {k === 'del' ? <Delete className="h-6 w-6" /> : k}
