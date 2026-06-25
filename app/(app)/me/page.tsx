@@ -1,16 +1,12 @@
-import Link from 'next/link'
-import { Settings, LogOut, Pencil } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import { requireUser } from '@/lib/auth/user'
 import { getSettings } from '@/lib/settings'
-import { logout } from '@/lib/actions/auth'
+import { getT } from '@/lib/i18n/server'
 import { PageHeader } from '@/components/page-header'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { ChangePassword } from '@/components/me/change-password'
 import { EditProfile } from '@/components/me/edit-profile'
-import { LanguageSwitch } from '@/components/language-switch'
-import { getT } from '@/lib/i18n/server'
+import { SettingsList } from '@/components/me/settings-list'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,56 +19,30 @@ export default async function MePage() {
     <>
       <PageHeader title={t('me.title')} />
 
+      {/* 资料头：绿色调 hero，点按编辑 */}
       <EditProfile name={user.name} avatarPath={user.avatarPath}>
-        <button className="mf-raised mf-pressable mb-5 flex w-full items-center gap-4 p-5 text-left">
+        <button className="mf-tonal mf-pressable mb-6 flex w-full items-center gap-4 p-5">
           <Avatar
             name={user.name}
             src={user.avatarPath ? `/api/uploads/${user.avatarPath}` : null}
-            size={56}
+            size={60}
           />
-          <div className="relative flex-1">
+          <div className="relative flex-1 text-left">
             <div className="flex items-center gap-2">
-              <span className="text-lg font-semibold text-ink">
+              <span className="text-xl font-bold tracking-title text-ink">
                 {user.name}
               </span>
               {user.isAdmin && <Badge tone="accent">{t('me.admin')}</Badge>}
             </div>
-            <p className="text-sm text-secondary">{s.familyName}</p>
+            <p className="mt-0.5 text-sm text-secondary">{s.familyName}</p>
           </div>
-          <Pencil className="relative h-4 w-4 shrink-0 text-secondary" />
+          <span className="mf-chip relative">
+            <Pencil className="h-[18px] w-[18px]" />
+          </span>
         </button>
       </EditProfile>
 
-      <div className="space-y-3">
-        {/* 语言切换 */}
-        <div className="mf-raised flex items-center justify-between p-4">
-          <span className="relative text-[15px] text-ink">
-            {t('me.language')}
-          </span>
-          <LanguageSwitch className="relative w-[150px]" />
-        </div>
-
-        <ChangePassword />
-
-        {user.isAdmin && (
-          <Link
-            href="/admin"
-            className="mf-raised mf-pressable flex w-full items-center gap-3 p-4"
-          >
-            <Settings className="relative h-5 w-5 text-accent" />
-            <span className="relative text-[15px] text-ink">
-              {t('me.familyAdmin')}
-            </span>
-          </Link>
-        )}
-
-        <form action={logout}>
-          <Button type="submit" variant="trough" className="w-full" size="lg">
-            <LogOut className="h-5 w-5" />
-            {t('me.logout')}
-          </Button>
-        </form>
-      </div>
+      <SettingsList isAdmin={user.isAdmin} />
     </>
   )
 }

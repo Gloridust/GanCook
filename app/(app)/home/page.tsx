@@ -57,22 +57,28 @@ export default async function HomePage() {
 
   return (
     <>
-      <PageHeader
-        title={t('home.hi', { name: me.name })}
-        subtitle={t('home.sub', { family: s.familyName })}
-        action={
-          <CreateMealDialog today={today} tomorrow={tomorrow}>
-            <Button size="sm">
-              <Plus className="h-4 w-4" />
-              {t('home.openMeal')}
-            </Button>
-          </CreateMealDialog>
-        }
-      />
+      {/* 问候 hero：绿色调面 */}
+      <div className="mf-tonal mb-6 overflow-hidden p-5">
+        <div className="relative">
+          <p className="text-sm font-medium text-accent">{s.familyName}</p>
+          <h1 className="mt-1 text-[28px] font-bold leading-tight tracking-title text-ink">
+            {t('home.hi', { name: me.name })}
+          </h1>
+          <p className="mt-1 text-sm text-secondary">
+            {t('home.sub', { family: s.familyName }).split('·').pop()?.trim()}
+          </p>
+        </div>
+      </div>
 
-      <h2 className="mb-3 text-base font-semibold text-ink">
-        {t('home.upcoming')}
-      </h2>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="mf-section text-[15px] text-ink">{t('home.upcoming')}</h2>
+        <CreateMealDialog today={today} tomorrow={tomorrow}>
+          <Button size="sm" variant="tonal">
+            <Plus className="h-4 w-4" />
+            {t('home.openMeal')}
+          </Button>
+        </CreateMealDialog>
+      </div>
       {upcomingMeals.length === 0 ? (
         <Card className="flex flex-col items-center gap-3 py-8 text-center">
           <UtensilsCrossed className="relative h-8 w-8 text-secondary/50" />
