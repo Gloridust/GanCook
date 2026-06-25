@@ -53,6 +53,6 @@ export async function proxy(req: NextRequest) {
 export const config = {
   matcher: [
     // 排除静态资源
-    '/((?!_next/static|_next/image|favicon.ico|logo.jpg|manifest.json|sw.js|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt)).*)',
+    '/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt)).*)',
   ],
 }
