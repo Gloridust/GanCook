@@ -10,8 +10,11 @@
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 [![SQLite](https://img.shields.io/badge/SQLite-单文件-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Telegram](https://img.shields.io/badge/Telegram-讨论组-26A5E4?logo=telegram&logoColor=white)](https://t.me/GanCookProj)
 
 中文 · [English](README.en.md)
+
+💬 交流 / 反馈 / 许愿 → Telegram 讨论组 [@GanCookProj](https://t.me/GanCookProj)
 
 </div>
 

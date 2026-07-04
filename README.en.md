@@ -9,8 +9,11 @@
 [![Docker](https://img.shields.io/badge/Docker-one--command-2496ED?logo=docker&logoColor=white)](#-quick-start)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Telegram](https://img.shields.io/badge/Telegram-Chat-26A5E4?logo=telegram&logoColor=white)](https://t.me/GanCookProj)
 
 [中文](README.md) · English
+
+💬 Questions / feedback / ideas → Telegram group [@GanCookProj](https://t.me/GanCookProj)
 
 </div>
 
