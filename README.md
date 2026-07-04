@@ -106,6 +106,7 @@ docker compose up -d
 | `TZ` | `Asia/Shanghai` | 时区，影响自动饭局时间 |
 | `AUTH_SECRET` | 自动生成 | 会话签名密钥（留空自动生成并存到 `data/auth.secret`） |
 | `CRON_SECRET` | 自动生成 | 定时触发端点密钥 |
+| `COOKIE_SECURE` | 自动 | 会话 Cookie 是否强制 Secure；默认按请求协议判断，HTTPS 反代识别异常时可设为 `1` |
 
 ## 📖 入门指南（5 分钟上手）
 

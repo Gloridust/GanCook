@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { SignJWT, jwtVerify } from 'jose'
 import { AUTH_SECRET } from '@/lib/env'
 
@@ -43,10 +43,29 @@ export async function createSession(payload: SessionPayload): Promise<void> {
   store.set(COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: await shouldUseSecureCookie(),
     path: '/',
     maxAge: MAX_AGE,
   })
+}
+
+function envBool(v: string | undefined): boolean | null {
+  if (!v) return null
+  if (['1', 'true', 'yes', 'on'].includes(v.toLowerCase())) return true
+  if (['0', 'false', 'no', 'off'].includes(v.toLowerCase())) return false
+  return null
+}
+
+async function shouldUseSecureCookie(): Promise<boolean> {
+  const forced = envBool(process.env.COOKIE_SECURE)
+  if (forced !== null) return forced
+
+  const h = await headers()
+  const forwardedProto = h.get('x-forwarded-proto')?.split(',')[0]?.trim()
+  if (forwardedProto) return forwardedProto.toLowerCase() === 'https'
+
+  const forwarded = h.get('forwarded')?.match(/(?:^|[;,]\s*)proto=([^;,]+)/i)
+  return forwarded?.[1]?.replace(/^"|"$/g, '').toLowerCase() === 'https'
 }
 
 export async function clearSession(): Promise<void> {
