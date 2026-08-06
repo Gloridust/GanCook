@@ -13,12 +13,12 @@ const MAX_SIDE = 1280
 
 export async function saveImage(
   buffer: Buffer,
-  subdir: 'dishes' | 'avatars',
+  subdir: 'dishes' | 'avatars' | 'imports',
 ): Promise<string> {
   const dir = join(UPLOAD_DIR, subdir)
   await mkdir(dir, { recursive: true })
   const filename = `${crypto.randomUUID()}.webp`
-  const out = await sharp(buffer)
+  const out = await sharp(buffer, { limitInputPixels: 40_000_000, failOn: 'error' })
     .rotate()
     .resize(MAX_SIDE, MAX_SIDE, { fit: 'inside', withoutEnlargement: true })
     .webp({ quality: 80 })

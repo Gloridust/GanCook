@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import Cropper from 'react-easy-crop'
 import 'react-easy-crop/react-easy-crop.css'
@@ -27,8 +27,11 @@ export function ImageCropper({
   const [zoom, setZoom] = useState(1)
   const [pixels, setPixels] = useState<CropArea | null>(null)
   const [busy, setBusy] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  const mounted = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  )
 
   const onCropComplete = useCallback((_: unknown, areaPixels: CropArea) => {
     setPixels(areaPixels)

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { DishCard } from '@/components/dishes/dish-card'
 import { DishForm } from '@/components/dishes/dish-form'
+import { DishDetails } from '@/components/dishes/dish-details'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,7 +65,9 @@ export default async function DishesPage() {
                   <DishCard dish={dish} />
                 </DishForm>
               ) : (
-                <DishCard key={dish.id} dish={dish} />
+                <DishDetails key={dish.id} dish={dish}>
+                  <DishCard dish={dish} />
+                </DishDetails>
               ),
             )}
           </div>
@@ -81,7 +84,9 @@ export default async function DishesPage() {
                       <DishCard dish={dish} dimmed />
                     </DishForm>
                   ) : (
-                    <DishCard key={dish.id} dish={dish} dimmed />
+                    <DishDetails key={dish.id} dish={dish}>
+                      <DishCard dish={dish} dimmed />
+                    </DishDetails>
                   ),
                 )}
               </div>

@@ -42,6 +42,7 @@ export const dishes = sqliteTable(
       .$defaultFn(() => crypto.randomUUID()),
     name: text('name').notNull(),
     description: text('description'),
+    instructions: text('instructions'),
     // 图片相对路径，如 dishes/<uuid>.webp（落盘存储，非 base64）
     imagePath: text('image_path'),
     // 标签：荤/素/汤/主食 等，JSON 数组存储

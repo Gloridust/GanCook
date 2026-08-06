@@ -16,4 +16,9 @@ export async function register() {
 
   const { startScheduler } = await import('@/lib/scheduler')
   await startScheduler()
+
+  const { startTemporaryImportImageCleanup } = await import(
+    '@/lib/recipe/import-image'
+  )
+  startTemporaryImportImageCleanup()
 }
