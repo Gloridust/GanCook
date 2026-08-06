@@ -14,6 +14,7 @@ export const LLM_SETTING_KEYS = {
   model: 'llm.model',
   apiKey: 'llm.apiKey',
   enabled: 'llm.enabled',
+  allowPrivateNetwork: 'llm.allowPrivateNetwork',
 } as const
 
 export function getStoredLlmConfig(): StoredLlmConfig {
@@ -28,6 +29,8 @@ export function getStoredLlmConfig(): StoredLlmConfig {
     model: getSetting(LLM_SETTING_KEYS.model) || LLM_DEFAULTS[provider].model,
     apiKey: getSetting(LLM_SETTING_KEYS.apiKey) || '',
     enabled: getSetting(LLM_SETTING_KEYS.enabled) === '1',
+    allowPrivateNetwork:
+      getSetting(LLM_SETTING_KEYS.allowPrivateNetwork) === '1',
   }
 }
 

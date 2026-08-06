@@ -6,6 +6,7 @@ export type StoredLlmConfig = {
   model: string
   apiKey: string
   enabled: boolean
+  allowPrivateNetwork: boolean
 }
 
 export type PublicLlmConfig = Omit<StoredLlmConfig, 'apiKey'> & {
@@ -18,7 +19,18 @@ export type LlmConfigInput = {
   model: string
   apiKey: string
   enabled: boolean
+  allowPrivateNetwork: boolean
 }
+
+export type LlmRequestConfigInput = Pick<
+  LlmConfigInput,
+  'provider' | 'baseUrl' | 'apiKey' | 'allowPrivateNetwork'
+>
+
+export type LlmRequestConfig = Pick<
+  StoredLlmConfig,
+  'provider' | 'baseUrl' | 'apiKey' | 'allowPrivateNetwork'
+>
 
 export const LLM_DEFAULTS: Record<
   LlmProvider,
@@ -34,7 +46,11 @@ export const LLM_DEFAULTS: Record<
   },
 }
 
-function normalizeBaseUrl(value: string, provider: LlmProvider): string {
+export function normalizeLlmBaseUrl(
+  value: string,
+  provider: LlmProvider,
+  allowPrivateNetwork: boolean,
+): string {
   const raw = value.trim() || LLM_DEFAULTS[provider].baseUrl
   const url = new URL(raw)
   if (
@@ -44,21 +60,48 @@ function normalizeBaseUrl(value: string, provider: LlmProvider): string {
   ) {
     throw new Error('INVALID_LLM_BASE_URL')
   }
+  if (!allowPrivateNetwork && url.protocol !== 'https:') {
+    throw new Error('INSECURE_LLM_BASE_URL')
+  }
   return url.toString().replace(/\/$/, '')
 }
 
 function sameCredentialTarget(
   existing: StoredLlmConfig,
-  provider: LlmProvider,
   baseUrl: string,
 ): boolean {
   try {
     return (
-      existing.provider === provider &&
-      normalizeBaseUrl(existing.baseUrl, existing.provider) === baseUrl
+      normalizeLlmBaseUrl(
+        existing.baseUrl,
+        existing.provider,
+        existing.allowPrivateNetwork,
+      ) === baseUrl
     )
   } catch {
     return false
+  }
+}
+
+export function resolveLlmRequestConfig(
+  existing: StoredLlmConfig,
+  input: LlmRequestConfigInput,
+): LlmRequestConfig {
+  const provider: LlmProvider =
+    input.provider === 'openai' ? 'openai' : 'deepseek'
+  const baseUrl = normalizeLlmBaseUrl(
+    input.baseUrl,
+    provider,
+    input.allowPrivateNetwork,
+  )
+  const suppliedApiKey = input.apiKey.trim()
+  return {
+    provider,
+    baseUrl,
+    apiKey:
+      suppliedApiKey ||
+      (sameCredentialTarget(existing, baseUrl) ? existing.apiKey : ''),
+    allowPrivateNetwork: input.allowPrivateNetwork,
   }
 }
 
@@ -66,21 +109,10 @@ export function buildLlmSettingUpdates(
   existing: StoredLlmConfig,
   input: LlmConfigInput,
 ): StoredLlmConfig {
-  const provider: LlmProvider =
-    input.provider === 'openai' ? 'openai' : 'deepseek'
-  const baseUrl = normalizeBaseUrl(input.baseUrl, provider)
-  const suppliedApiKey = input.apiKey.trim()
-  const apiKey =
-    suppliedApiKey ||
-    (sameCredentialTarget(existing, provider, baseUrl) ? existing.apiKey : '')
-  if (apiKey && new URL(baseUrl).protocol !== 'https:') {
-    throw new Error('INSECURE_LLM_BASE_URL')
-  }
+  const requestConfig = resolveLlmRequestConfig(existing, input)
   return {
-    provider,
-    baseUrl,
-    model: input.model.trim() || LLM_DEFAULTS[provider].model,
-    apiKey,
+    ...requestConfig,
+    model: input.model.trim() || LLM_DEFAULTS[requestConfig.provider].model,
     enabled: input.enabled,
   }
 }
@@ -93,6 +125,7 @@ export function toPublicLlmConfig(
     baseUrl: config.baseUrl,
     model: config.model,
     enabled: config.enabled,
+    allowPrivateNetwork: config.allowPrivateNetwork,
     apiKeyConfigured: Boolean(config.apiKey),
   }
 }

@@ -1,9 +1,10 @@
 import 'server-only'
-import { lookup } from 'node:dns/promises'
 import * as http from 'node:http'
 import * as https from 'node:https'
-import { isIP, type LookupFunction } from 'node:net'
-import { assertSafeRemoteUrl, selectPublicAddress } from './ssrf'
+import { createPinnedLookup } from '@/lib/net/pinned-lookup'
+import { assertSafeRemoteUrl } from './ssrf'
+
+export { createPinnedLookup } from '@/lib/net/pinned-lookup'
 
 export type RemoteResource = {
   body: Buffer
@@ -40,32 +41,22 @@ const LIMITS: Record<
 
 const REDIRECTS = new Set([301, 302, 303, 307, 308])
 const MAX_REDIRECTS = 5
+const MAX_ADDRESS_ATTEMPTS = 4
 const REQUEST_TIMEOUT_MS = 10_000
 
 function headerValue(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0] ?? '' : value ?? ''
 }
 
-export async function createPinnedLookup(url: URL): Promise<LookupFunction> {
-  const hostname = url.hostname.replace(/^\[|\]$/g, '')
-  const family = isIP(hostname)
-  const addresses = family
-    ? [{ address: hostname, family }]
-    : await lookup(hostname, { all: true, verbatim: true })
-  const selected = selectPublicAddress(addresses)
-  return (_hostname, _options, callback) => {
-    callback(null, selected.address, selected.family)
-  }
-}
-
 async function requestOnce(
   url: URL,
   kind: ResourceKind,
+  addressIndex = 0,
 ): Promise<
   | { redirect: URL }
   | { body: Buffer; contentType: string }
 > {
-  const lookupFn = await createPinnedLookup(url)
+  const lookupFn = await createPinnedLookup(url, { addressIndex })
   const transport = url.protocol === 'https:' ? https : http
   const { bytes, contentTypes } = LIMITS[kind]
 
@@ -175,11 +166,24 @@ export async function safeFetchResource(
   kind: ResourceKind,
 ): Promise<RemoteResource> {
   let url = assertSafeRemoteUrl(input)
+  let addressIndex = 0
   for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects += 1) {
-    const response = await requestOnce(url, kind)
+    const response = await requestOnce(url, kind, addressIndex)
     if ('redirect' in response) {
       if (redirects === MAX_REDIRECTS) throw new Error('TOO_MANY_REDIRECTS')
-      url = assertSafeRemoteUrl(response.redirect)
+      const next = assertSafeRemoteUrl(response.redirect)
+      const isXiachufangCaptcha =
+        kind === 'html' &&
+        next.hostname === 'www.xiachufang.com' &&
+        next.pathname.startsWith('/auth/humancheck_captcha/') &&
+        addressIndex + 1 < MAX_ADDRESS_ATTEMPTS
+      if (isXiachufangCaptcha) {
+        addressIndex += 1
+        redirects -= 1
+        continue
+      }
+      url = next
+      addressIndex = 0
       continue
     }
     return {

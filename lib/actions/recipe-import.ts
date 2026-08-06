@@ -5,6 +5,7 @@ import { getT } from '@/lib/i18n/server'
 import { extractRecipeWithLlm } from '@/lib/llm/client'
 import { getStoredLlmConfig } from '@/lib/llm/settings'
 import { safeFetchResource } from '@/lib/recipe/fetch'
+import { logRecipeImportFailure } from '@/lib/recipe/import-log'
 import {
   discardTemporaryImportImage,
   saveTemporaryImportImage,
@@ -110,7 +111,8 @@ export async function importRecipeFromUrl(input: {
     let page
     try {
       page = await safeFetchResource(url, 'html')
-    } catch {
+    } catch (error) {
+      logRecipeImportFailure('page_fetch', url, error)
       return { ok: false, error: t('err.recipeFetchFailed') }
     }
 
@@ -124,7 +126,6 @@ export async function importRecipeFromUrl(input: {
     let llmWarning = false
     if (
       llmConfig.enabled &&
-      llmConfig.apiKey &&
       (!draft.name || !draft.instructions)
     ) {
       try {
@@ -134,7 +135,8 @@ export async function importRecipeFromUrl(input: {
           parsed.visibleText,
         )
         draft = mergeRecipeDrafts(draft, llmDraft)
-      } catch {
+      } catch (error) {
+        logRecipeImportFailure('llm_extract', llmConfig.baseUrl, error)
         llmWarning = true
       }
     }
@@ -158,7 +160,8 @@ export async function importRecipeFromUrl(input: {
         const saved = await saveTemporaryImportImage(image.body, me.id)
         imageToken = saved.token
         imagePreviewPath = saved.previewPath
-      } catch {
+      } catch (error) {
+        logRecipeImportFailure('image_fetch', draft.imageUrl, error)
         imageWarning = true
       }
     }

@@ -10,10 +10,12 @@ import { setSetting, setSettings } from '@/lib/settings'
 import { getT } from '@/lib/i18n/server'
 import {
   buildLlmSettingUpdates,
+  resolveLlmRequestConfig,
   toPublicLlmConfig,
   type LlmConfigInput,
   type PublicLlmConfig,
 } from '@/lib/llm/config'
+import { discoverLlmModels as fetchLlmModels } from '@/lib/llm/models'
 import {
   getStoredLlmConfig,
   LLM_SETTING_KEYS,
@@ -58,6 +60,7 @@ const llmSettingsSchema = z.object({
   model: z.string().max(100),
   apiKey: z.string().max(500),
   enabled: z.boolean(),
+  allowPrivateNetwork: z.boolean(),
 })
 
 export async function updateLlmSettings(
@@ -85,9 +88,46 @@ export async function updateLlmSettings(
     [LLM_SETTING_KEYS.model, updated.model],
     [LLM_SETTING_KEYS.apiKey, updated.apiKey],
     [LLM_SETTING_KEYS.enabled, updated.enabled ? '1' : '0'],
+    [
+      LLM_SETTING_KEYS.allowPrivateNetwork,
+      updated.allowPrivateNetwork ? '1' : '0',
+    ],
   ])
   revalidatePath('/admin')
   return { ok: true, config: toPublicLlmConfig(updated) }
+}
+
+const llmDiscoverySchema = llmSettingsSchema.pick({
+  provider: true,
+  baseUrl: true,
+  apiKey: true,
+  allowPrivateNetwork: true,
+})
+
+export async function discoverLlmModels(input: {
+  provider: LlmConfigInput['provider']
+  baseUrl: string
+  apiKey: string
+  allowPrivateNetwork: boolean
+}): Promise<
+  { ok: true; models: string[] } | { ok: false; error: string }
+> {
+  const t = await getT()
+  const r = await requireAdminUser()
+  if (!r.ok) return r
+  const parsed = llmDiscoverySchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: t('err.llmConfigInvalid') }
+
+  try {
+    const requestConfig = resolveLlmRequestConfig(
+      getStoredLlmConfig(),
+      parsed.data,
+    )
+    const models = await fetchLlmModels(requestConfig)
+    return { ok: true, models }
+  } catch {
+    return { ok: false, error: t('err.llmModelsFailed') }
+  }
 }
 
 const scheduleSchema = z.object({

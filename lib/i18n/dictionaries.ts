@@ -201,13 +201,23 @@ const zh: Messages = {
   'admin.llmDesc':
     '当网页没有标准菜谱数据时，可用兼容 Chat Completions 的模型辅助提取。',
   'admin.llmProvider': '服务商',
-  'admin.llmOpenAiCompatible': 'OpenAI 兼容',
+  'admin.llmOpenAiCompatible': 'OpenAI 兼容（含 LiteLLM）',
+  'admin.llmOpenAiCompatibleDesc':
+    'LiteLLM 使用 OpenAI 兼容接口，无需单独选择厂商类型。',
   'admin.llmBaseUrl': 'Base URL',
   'admin.llmModel': '模型',
+  'admin.llmFetchModels': '获取模型',
+  'admin.llmModelsFound': '已获取 {n} 个模型',
+  'admin.llmModelCustomHint': '可从列表选择，也可手动输入自定义模型。',
   'admin.llmApiKey': 'API Key',
-  'admin.llmApiKeyPh': '留空则保留已配置的密钥',
+  'admin.llmApiKeyPh': '留空仅在 Base URL 未变时使用已保存密钥',
   'admin.llmKeyConfigured': '已配置',
   'admin.llmKeyMissing': '未配置',
+  'admin.llmAllowPrivateNetwork': '允许局域网 / HTTP 端点',
+  'admin.llmAllowPrivateNetworkDesc':
+    '默认关闭；开启后允许访问 localhost、私网地址和明文 HTTP。',
+  'admin.llmAllowPrivateNetworkWarning':
+    '安全提示：仅对你信任的自托管服务开启。HTTP 会以明文传输 API Key 和菜谱内容。',
   'admin.llmEnabled': '启用 LLM 辅助',
   'admin.llmEnabledDesc': '仅在结构化数据不足时调用',
   'admin.autoMeals': '自动饭局',
@@ -265,6 +275,7 @@ const zh: Messages = {
   'err.importBusy': '正在解析菜谱，请稍候再试',
   'err.importImageExpired': '导入的封面已过期，请重新解析或手动上传',
   'err.llmConfigInvalid': 'LLM 配置格式不正确',
+  'err.llmModelsFailed': '无法获取模型，请检查地址、API Key 和安全开关',
   'err.saveFailed': '保存失败，请重试',
   'err.mealNotFound': '饭局不存在',
   'err.dateFmt': '日期格式不对',
@@ -463,13 +474,25 @@ const en: Messages = {
   'admin.llmDesc':
     'Use a Chat Completions-compatible model when a page has no standard recipe data.',
   'admin.llmProvider': 'Provider',
-  'admin.llmOpenAiCompatible': 'OpenAI-compatible',
+  'admin.llmOpenAiCompatible': 'OpenAI-compatible (including LiteLLM)',
+  'admin.llmOpenAiCompatibleDesc':
+    'LiteLLM uses the OpenAI-compatible API and does not need a separate provider type.',
   'admin.llmBaseUrl': 'Base URL',
   'admin.llmModel': 'Model',
+  'admin.llmFetchModels': 'Fetch models',
+  'admin.llmModelsFound': 'Found {n} models',
+  'admin.llmModelCustomHint':
+    'Choose a discovered model or enter a custom model manually.',
   'admin.llmApiKey': 'API key',
-  'admin.llmApiKeyPh': 'Leave blank to keep the configured key',
+  'admin.llmApiKeyPh':
+    'Leave blank to use the saved key only when the Base URL is unchanged',
   'admin.llmKeyConfigured': 'Configured',
   'admin.llmKeyMissing': 'Not configured',
+  'admin.llmAllowPrivateNetwork': 'Allow LAN / HTTP endpoints',
+  'admin.llmAllowPrivateNetworkDesc':
+    'Off by default; enables localhost, private addresses, and plaintext HTTP.',
+  'admin.llmAllowPrivateNetworkWarning':
+    'Security warning: enable only for services you trust. HTTP sends the API key and recipe content in plaintext.',
   'admin.llmEnabled': 'Enable LLM assistance',
   'admin.llmEnabledDesc': 'Called only when structured data is incomplete',
   'admin.autoMeals': 'Auto meals',
@@ -527,6 +550,8 @@ const en: Messages = {
   'err.importImageExpired':
     'The imported cover expired. Parse again or upload a photo',
   'err.llmConfigInvalid': 'Invalid LLM configuration',
+  'err.llmModelsFailed':
+    'Could not fetch models. Check the endpoint, API key, and security switch',
   'err.saveFailed': 'Could not save. Please try again',
   'err.mealNotFound': 'Meal not found',
   'err.dateFmt': 'Invalid date',
