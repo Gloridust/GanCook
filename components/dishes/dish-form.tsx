@@ -31,7 +31,18 @@ import {
   discardImportedRecipeImage,
   importRecipeFromUrl,
 } from '@/lib/actions/recipe-import'
+import {
+  importProgressPhaseAt,
+  type ImportProgressPhase,
+} from '@/lib/recipe/import-progress'
 import type { Dish } from '@/lib/db/schema'
+
+const IMPORT_PROGRESS_KEYS: Record<ImportProgressPhase, string> = {
+  cleaning: 'dishform.importProgressCleaning',
+  fetching: 'dishform.importProgressFetching',
+  extracting: 'dishform.importProgressExtracting',
+  image: 'dishform.importProgressImage',
+}
 
 export function DishForm({
   mode,
@@ -60,17 +71,44 @@ export function DishForm({
     null,
   )
   const [importNotice, setImportNotice] = useState('')
+  const [importProgress, setImportProgress] =
+    useState<ImportProgressPhase | null>(null)
   const [pending, startTransition] = useTransition()
   const [importing, startImportTransition] = useTransition()
   const openRef = useRef(false)
+  const mountedRef = useRef(true)
+  const importTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const objectPreviewRef = useRef<string | null>(null)
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (importTimerRef.current) clearInterval(importTimerRef.current)
       if (objectPreviewRef.current) URL.revokeObjectURL(objectPreviewRef.current)
-    },
-    [],
-  )
+    }
+  }, [])
+
+  const stopImportProgress = () => {
+    if (importTimerRef.current) {
+      clearInterval(importTimerRef.current)
+      importTimerRef.current = null
+    }
+    if (mountedRef.current) setImportProgress(null)
+  }
+
+  const startImportProgress = () => {
+    stopImportProgress()
+    const startedAt = Date.now()
+    setImportProgress(importProgressPhaseAt(0))
+    importTimerRef.current = setInterval(() => {
+      if (!openRef.current) {
+        stopImportProgress()
+        return
+      }
+      setImportProgress(importProgressPhaseAt(Date.now() - startedAt))
+    }, 500)
+  }
 
   const setObjectPreview = (value: string | null) => {
     if (objectPreviewRef.current) URL.revokeObjectURL(objectPreviewRef.current)
@@ -93,38 +131,43 @@ export function DishForm({
   const runImport = () => {
     setError('')
     setImportNotice('')
+    startImportProgress()
     startImportTransition(async () => {
-      const res = await importRecipeFromUrl({
-        shareText: importText,
-        previousImageToken: importedImageToken,
-      })
-      if (!res.ok) {
-        setError(res.error)
-        return
+      try {
+        const res = await importRecipeFromUrl({
+          shareText: importText,
+          previousImageToken: importedImageToken,
+        })
+        if (!res.ok) {
+          if (openRef.current) setError(res.error)
+          return
+        }
+        if (!openRef.current) {
+          void discardImportedRecipeImage(res.recipe.imageToken)
+          return
+        }
+        setName(res.recipe.name)
+        setDescription(res.recipe.description)
+        setInstructions(res.recipe.instructions)
+        setTags(res.recipe.tags.join(' '))
+        setBlob(null)
+        setImportedImageToken(res.recipe.imageToken)
+        setObjectPreview(null)
+        setPreview(
+          res.recipe.imagePreviewPath && res.recipe.imageToken
+            ? `/api/uploads/${res.recipe.imagePreviewPath}?token=${encodeURIComponent(res.recipe.imageToken)}`
+            : null,
+        )
+        setImportNotice(
+          res.recipe.llmWarning
+            ? t('dishform.importedLlmWarning')
+            : res.recipe.imageWarning
+              ? t('dishform.importedImageWarning')
+              : t('dishform.imported'),
+        )
+      } finally {
+        stopImportProgress()
       }
-      if (!openRef.current) {
-        void discardImportedRecipeImage(res.recipe.imageToken)
-        return
-      }
-      setName(res.recipe.name)
-      setDescription(res.recipe.description)
-      setInstructions(res.recipe.instructions)
-      setTags(res.recipe.tags.join(' '))
-      setBlob(null)
-      setImportedImageToken(res.recipe.imageToken)
-      setObjectPreview(null)
-      setPreview(
-        res.recipe.imagePreviewPath && res.recipe.imageToken
-          ? `/api/uploads/${res.recipe.imagePreviewPath}?token=${encodeURIComponent(res.recipe.imageToken)}`
-          : null,
-      )
-      setImportNotice(
-        res.recipe.llmWarning
-          ? t('dishform.importedLlmWarning')
-          : res.recipe.imageWarning
-          ? t('dishform.importedImageWarning')
-          : t('dishform.imported'),
-      )
     })
   }
 
@@ -182,6 +225,7 @@ export function DishForm({
 
   const changeOpen = (next: boolean) => {
     openRef.current = next
+    if (!next) stopImportProgress()
     if (!next && mode === 'create' && importedImageToken) {
       void discardImportedRecipeImage(importedImageToken)
       setImportedImageToken(null)
@@ -224,6 +268,20 @@ export function DishForm({
                 <Download className="h-4 w-4" />
                 {t('dishform.import')}
               </Button>
+              {importProgress && (
+                <div
+                  className="flex items-center justify-center gap-2 text-xs text-secondary"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  <span
+                    className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent"
+                    aria-hidden="true"
+                  />
+                  {t(IMPORT_PROGRESS_KEYS[importProgress])}
+                </div>
+              )}
               {importNotice && (
                 <p className="text-xs text-secondary">{importNotice}</p>
               )}

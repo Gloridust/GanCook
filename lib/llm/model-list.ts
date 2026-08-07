@@ -1,3 +1,5 @@
+import type { LlmProvider } from './config'
+
 const MAX_DISCOVERED_MODELS = 200
 
 export function modelsUrl(baseUrl: string): string {
@@ -45,6 +47,15 @@ export function parseModelIds(
   return ids
 }
 
-export function defaultDiscoveredModel(models: readonly string[]): string {
-  return models[0] ?? ''
+export function chooseDiscoveredModel(
+  models: readonly string[],
+  currentModel: string,
+  provider: LlmProvider,
+): string {
+  if (models.length === 0) return currentModel
+  if (models.includes(currentModel)) return currentModel
+  if (provider === 'deepseek' && models.includes('deepseek-chat')) {
+    return 'deepseek-chat'
+  }
+  return models[0]
 }

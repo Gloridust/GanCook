@@ -63,6 +63,17 @@ export function normalizeLlmBaseUrl(
   if (!allowPrivateNetwork && url.protocol !== 'https:') {
     throw new Error('INSECURE_LLM_BASE_URL')
   }
+  if (
+    provider === 'deepseek' &&
+    url.protocol === 'https:' &&
+    url.hostname.toLowerCase() === 'api.deepseek.com' &&
+    !url.port &&
+    (url.pathname === '/' || /^\/v1\/?$/.test(url.pathname))
+  ) {
+    url.pathname = '/'
+    url.search = ''
+    url.hash = ''
+  }
   return url.toString().replace(/\/$/, '')
 }
 

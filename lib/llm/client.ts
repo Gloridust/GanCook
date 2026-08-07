@@ -7,9 +7,9 @@ import {
 } from '@/lib/recipe/llm'
 import type { RecipeDraft } from '@/lib/recipe/parse'
 import { requestLlmJson } from './http'
+import { RECIPE_LLM_TIMEOUT_MS } from './timeouts'
 
 const MAX_LLM_RESPONSE = 256 * 1024
-const LLM_TIMEOUT_MS = 20_000
 
 export async function extractRecipeWithLlm(
   config: StoredLlmConfig,
@@ -23,7 +23,7 @@ export async function extractRecipeWithLlm(
     apiKey: config.apiKey,
     allowPrivateNetwork: config.allowPrivateNetwork,
     maxResponseBytes: MAX_LLM_RESPONSE,
-    timeoutMs: LLM_TIMEOUT_MS,
+    timeoutMs: RECIPE_LLM_TIMEOUT_MS,
     method: 'POST',
     body: JSON.stringify({
       model: config.model,

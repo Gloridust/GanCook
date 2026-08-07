@@ -3,6 +3,10 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { extractHttpUrl } from '../lib/recipe/url'
 import {
+  IMPORT_PROGRESS_PHASES,
+  importProgressPhaseAt,
+} from '../lib/recipe/import-progress'
+import {
   extractRecipeFromHtml,
   isUsableRecipeDraft,
   mergeRecipeDrafts,
@@ -24,6 +28,7 @@ import {
   verifyImportImageToken,
 } from '../lib/recipe/image-token'
 import { dictionaries } from '../lib/i18n/dictionaries'
+import { RECIPE_LLM_TIMEOUT_MS } from '../lib/llm/timeouts'
 
 function fixture(name: string): string {
   return readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8')
@@ -59,6 +64,72 @@ test('extractHttpUrl supports Xiaohongshu short and common note links with Chine
     extractHttpUrl('看看这个：https://www.xiaohongshu.com/discovery/item/64def】'),
     'https://www.xiaohongshu.com/discovery/item/64def',
   )
+})
+
+test('extractHttpUrl prioritizes recipe platforms over earlier unrelated links in full share text', () => {
+  assert.equal(
+    extractHttpUrl(
+      [
+        '用户：今天吃什么',
+        '个人主页 https://example.com/profile',
+        '标题：空气炸锅鸡翅',
+        '复制口令后打开（https://xhslink.com/a1B2c3。）',
+        '备用链接：https://example.com/other',
+      ].join('\n'),
+    ),
+    'https://xhslink.com/a1B2c3',
+  )
+  assert.equal(
+    extractHttpUrl(
+      '先看 https://example.com，再看【https://www.xiachufang.com/recipe/12345/】',
+    ),
+    'https://m.xiachufang.com/recipe/12345/',
+  )
+})
+
+test('extractHttpUrl supports protocol-less Xiaohongshu links and rejects unsafe schemes', () => {
+  assert.equal(
+    extractHttpUrl('小红书口令（xhslink.com/a1B2c3）复制后打开'),
+    'https://xhslink.com/a1B2c3',
+  )
+  assert.equal(extractHttpUrl('javascript:xhslink.com/evil'), null)
+  assert.equal(extractHttpUrl('ftp://xhslink.com/evil'), null)
+  assert.equal(extractHttpUrl('javascript:https://xhslink.com/evil'), null)
+  assert.equal(extractHttpUrl('blob:https://xhslink.com/evil'), null)
+  assert.equal(extractHttpUrl('data:text/plain,xhslink.com/evil'), null)
+})
+
+test('recipe import progress advances honestly by elapsed time and remains active during long LLM waits', () => {
+  assert.deepEqual(IMPORT_PROGRESS_PHASES, [
+    'cleaning',
+    'fetching',
+    'extracting',
+    'image',
+  ])
+  assert.equal(importProgressPhaseAt(0), 'cleaning')
+  assert.equal(importProgressPhaseAt(1_500), 'fetching')
+  assert.equal(importProgressPhaseAt(12_000), 'extracting')
+  assert.equal(importProgressPhaseAt(60_000), 'extracting')
+  assert.equal(importProgressPhaseAt(72_000), 'image')
+  assert.equal(importProgressPhaseAt(75_000), 'image')
+})
+
+test('recipe LLM timeout allows up to sixty seconds', () => {
+  assert.equal(RECIPE_LLM_TIMEOUT_MS, 60_000)
+})
+
+test('recipe import progress has localized, in-progress wording in both locales', () => {
+  const keys = [
+    'dishform.importProgressCleaning',
+    'dishform.importProgressFetching',
+    'dishform.importProgressExtracting',
+    'dishform.importProgressImage',
+  ]
+  for (const key of keys) {
+    assert.ok(dictionaries.zh[key])
+    assert.ok(dictionaries.en[key])
+    assert.doesNotMatch(dictionaries.en[key], /\b(done|completed|finished)\b/i)
+  }
 })
 
 test('recipe import placeholder names Xiachufang, Xiaohongshu, and arbitrary recipe URLs in both locales', () => {

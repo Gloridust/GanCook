@@ -135,6 +135,10 @@ const zh: Messages = {
   'dishform.importTitle': '从菜谱链接导入',
   'dishform.importPh': '粘贴下厨房、小红书分享文本，或任意菜谱链接',
   'dishform.import': '解析并预填',
+  'dishform.importProgressCleaning': '正在清洗分享内容…',
+  'dishform.importProgressFetching': '正在抓取网页内容…',
+  'dishform.importProgressExtracting': '正在提炼菜谱信息…',
+  'dishform.importProgressImage': '正在处理封面图片…',
   'dishform.imported': '已解析，请检查内容后再添加。',
   'dishform.importedImageWarning':
     '菜谱已解析，但封面无法安全下载；你可以手动添加照片。',
@@ -208,6 +212,8 @@ const zh: Messages = {
   'admin.llmModel': '模型',
   'admin.llmFetchModels': '获取模型',
   'admin.llmModelsFound': '已获取 {n} 个模型',
+  'admin.llmChooseDiscovered': '选择已获取模型',
+  'admin.llmEnterCustom': '手动输入自定义模型',
   'admin.llmModelCustomHint': '可从列表选择，也可手动输入自定义模型。',
   'admin.llmApiKey': 'API Key',
   'admin.llmApiKeyPh': '留空仅在 Base URL 未变时使用已保存密钥',
@@ -275,6 +281,10 @@ const zh: Messages = {
   'err.importBusy': '正在解析菜谱，请稍候再试',
   'err.importImageExpired': '导入的封面已过期，请重新解析或手动上传',
   'err.llmConfigInvalid': 'LLM 配置格式不正确',
+  'err.llmModelsAuthInvalid': 'API 密钥无效或无权访问，请检查后重试',
+  'err.llmModelsRateLimited': '请求过于频繁或额度受限，请稍后再试',
+  'err.llmModelsTimeout': '连接模型服务超时，请检查网络后重试',
+  'err.llmModelsResponseInvalid': '模型服务响应格式异常，请检查接口地址',
   'err.llmModelsFailed': '无法获取模型，请检查地址、API Key 和安全开关',
   'err.saveFailed': '保存失败，请重试',
   'err.mealNotFound': '饭局不存在',
@@ -411,6 +421,10 @@ const en: Messages = {
   'dishform.importPh':
     'Paste Xiachufang or Xiaohongshu share text, or any recipe URL',
   'dishform.import': 'Parse and prefill',
+  'dishform.importProgressCleaning': 'Cleaning the shared content…',
+  'dishform.importProgressFetching': 'Fetching the web page…',
+  'dishform.importProgressExtracting': 'Extracting recipe information…',
+  'dishform.importProgressImage': 'Processing the cover image…',
   'dishform.imported': 'Parsed. Review the fields before adding.',
   'dishform.importedImageWarning':
     'The recipe was parsed, but its cover could not be downloaded safely. You can add a photo manually.',
@@ -481,6 +495,8 @@ const en: Messages = {
   'admin.llmModel': 'Model',
   'admin.llmFetchModels': 'Fetch models',
   'admin.llmModelsFound': 'Found {n} models',
+  'admin.llmChooseDiscovered': 'Choose fetched model',
+  'admin.llmEnterCustom': 'Enter custom model',
   'admin.llmModelCustomHint':
     'Choose a discovered model or enter a custom model manually.',
   'admin.llmApiKey': 'API key',
@@ -550,6 +566,14 @@ const en: Messages = {
   'err.importImageExpired':
     'The imported cover expired. Parse again or upload a photo',
   'err.llmConfigInvalid': 'Invalid LLM configuration',
+  'err.llmModelsAuthInvalid':
+    'The API key is invalid or unauthorized. Check it and try again',
+  'err.llmModelsRateLimited':
+    'The service is rate-limiting requests or the quota is exhausted. Try again later',
+  'err.llmModelsTimeout':
+    'The model service connection timed out. Check the network and try again',
+  'err.llmModelsResponseInvalid':
+    'The model service returned an invalid response format. Check the endpoint',
   'err.llmModelsFailed':
     'Could not fetch models. Check the endpoint, API key, and security switch',
   'err.saveFailed': 'Could not save. Please try again',

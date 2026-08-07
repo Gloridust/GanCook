@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   buildLlmSettingUpdates,
   chatCompletionsUrl,
+  normalizeLlmBaseUrl,
   resolveLlmRequestConfig,
   toPublicLlmConfig,
   type StoredLlmConfig,
@@ -89,6 +90,33 @@ test('deepseek defaults are applied when switching provider with empty fields', 
   assert.equal(updated.baseUrl, 'https://api.deepseek.com')
   assert.equal(updated.model, 'deepseek-chat')
   assert.equal(updated.apiKey, 'new-key')
+})
+
+test('official DeepSeek base URLs normalize to the canonical endpoint with or without /v1', () => {
+  assert.equal(
+    normalizeLlmBaseUrl(
+      'https://api.deepseek.com/v1/',
+      'deepseek',
+      false,
+    ),
+    'https://api.deepseek.com',
+  )
+  assert.equal(
+    normalizeLlmBaseUrl(
+      'https://api.deepseek.com',
+      'deepseek',
+      false,
+    ),
+    'https://api.deepseek.com',
+  )
+  assert.equal(
+    normalizeLlmBaseUrl(
+      'https://api.deepseek.com:8443/v1',
+      'deepseek',
+      false,
+    ),
+    'https://api.deepseek.com:8443/v1',
+  )
 })
 
 test('HTTP and private LLM endpoints require the explicit admin safety switch', () => {

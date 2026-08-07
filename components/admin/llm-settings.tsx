@@ -16,7 +16,7 @@ import {
   type LlmProvider,
   type PublicLlmConfig,
 } from '@/lib/llm/config'
-import { defaultDiscoveredModel } from '@/lib/llm/model-list'
+import { chooseDiscoveredModel } from '@/lib/llm/model-list'
 
 export function LlmSettings({ config }: { config: PublicLlmConfig }) {
   const t = useT()
@@ -30,6 +30,7 @@ export function LlmSettings({ config }: { config: PublicLlmConfig }) {
   )
   const [keyConfigured, setKeyConfigured] = useState(config.apiKeyConfigured)
   const [modelOptions, setModelOptions] = useState<string[]>([])
+  const [customModel, setCustomModel] = useState(true)
   const [message, setMessage] = useState('')
   const [saving, startSaving] = useTransition()
   const [discovering, startDiscovering] = useTransition()
@@ -39,6 +40,7 @@ export function LlmSettings({ config }: { config: PublicLlmConfig }) {
     setBaseUrl(LLM_DEFAULTS[next].baseUrl)
     setModel(LLM_DEFAULTS[next].model)
     setModelOptions([])
+    setCustomModel(true)
   }
 
   const save = () => {
@@ -77,8 +79,14 @@ export function LlmSettings({ config }: { config: PublicLlmConfig }) {
         allowPrivateNetwork,
       })
       if (res.ok) {
+        const nextModel = chooseDiscoveredModel(
+          res.models,
+          model,
+          provider,
+        )
         setModelOptions(res.models)
-        setModel(defaultDiscoveredModel(res.models))
+        setModel(nextModel)
+        setCustomModel(false)
         setMessage(t('admin.llmModelsFound', { n: res.models.length }))
       } else {
         setMessage(res.error)
@@ -112,6 +120,7 @@ export function LlmSettings({ config }: { config: PublicLlmConfig }) {
           onChange={(event) => {
             setBaseUrl(event.target.value)
             setModelOptions([])
+            setCustomModel(true)
           }}
           placeholder={LLM_DEFAULTS[provider].baseUrl}
           autoCapitalize="none"
@@ -134,20 +143,47 @@ export function LlmSettings({ config }: { config: PublicLlmConfig }) {
             {t('admin.llmFetchModels')}
           </Button>
         </div>
-        <Input
-          id="llm-model"
-          list="llm-model-options"
-          value={model}
-          onChange={(event) => setModel(event.target.value)}
-          placeholder={LLM_DEFAULTS[provider].model}
-          autoCapitalize="none"
-          spellCheck={false}
-        />
-        <datalist id="llm-model-options">
-          {modelOptions.map((option) => (
-            <option key={option} value={option} />
-          ))}
-        </datalist>
+        {modelOptions.length > 0 && !customModel ? (
+          <select
+            id="llm-model"
+            value={model}
+            onChange={(event) => setModel(event.target.value)}
+            className="mf-inset h-11 w-full appearance-auto px-4 text-[15px] text-ink outline-none focus:ring-2 focus:ring-accent/50"
+          >
+            {modelOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <Input
+            id="llm-model"
+            value={model}
+            onChange={(event) => setModel(event.target.value)}
+            placeholder={LLM_DEFAULTS[provider].model}
+            autoCapitalize="none"
+            spellCheck={false}
+          />
+        )}
+        {modelOptions.length > 0 && (
+          <button
+            type="button"
+            className="mt-2 text-xs font-semibold text-accent"
+            onClick={() => {
+              if (customModel) {
+                setModel(
+                  chooseDiscoveredModel(modelOptions, model, provider),
+                )
+              }
+              setCustomModel((value) => !value)
+            }}
+          >
+            {customModel
+              ? t('admin.llmChooseDiscovered')
+              : t('admin.llmEnterCustom')}
+          </button>
+        )}
         <p className="mt-1.5 text-xs text-secondary">
           {t('admin.llmModelCustomHint')}
         </p>

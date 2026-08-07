@@ -12,6 +12,16 @@ export type LlmJsonRequestOptions = {
   body?: string
 }
 
+export class LlmHttpError extends Error {
+  constructor(
+    code: string,
+    readonly status?: number,
+  ) {
+    super(code)
+    this.name = 'LlmHttpError'
+  }
+}
+
 export function assertLlmEndpointUrl(
   input: string | URL,
   allowPrivateNetwork: boolean,
@@ -91,13 +101,19 @@ export async function requestLlmJson(
       },
       (response) => {
         const status = response.statusCode ?? 0
-        if (
-          status < 200 ||
-          status >= 300 ||
-          !isJsonContentType(response.headers['content-type'])
-        ) {
+        if (status < 200 || status >= 300) {
           response.resume()
-          return finish(new Error('LLM_REQUEST_FAILED'))
+          if (status === 401 || status === 403) {
+            return finish(new LlmHttpError('LLM_AUTH_INVALID', status))
+          }
+          if (status === 429) {
+            return finish(new LlmHttpError('LLM_RATE_LIMITED', status))
+          }
+          return finish(new LlmHttpError('LLM_REQUEST_FAILED', status))
+        }
+        if (!isJsonContentType(response.headers['content-type'])) {
+          response.resume()
+          return finish(new LlmHttpError('LLM_RESPONSE_INVALID', status))
         }
 
         const declaredLength = Number(response.headers['content-length'])
@@ -106,7 +122,7 @@ export async function requestLlmJson(
           declaredLength > options.maxResponseBytes
         ) {
           response.resume()
-          return finish(new Error('LLM_RESPONSE_TOO_LARGE'))
+          return finish(new LlmHttpError('LLM_RESPONSE_TOO_LARGE', status))
         }
 
         const chunks: Buffer[] = []
@@ -114,7 +130,9 @@ export async function requestLlmJson(
         response.on('data', (chunk: Buffer) => {
           size += chunk.length
           if (size > options.maxResponseBytes) {
-            response.destroy(new Error('LLM_RESPONSE_TOO_LARGE'))
+            response.destroy(
+              new LlmHttpError('LLM_RESPONSE_TOO_LARGE', status),
+            )
             return
           }
           chunks.push(chunk)
@@ -125,12 +143,18 @@ export async function requestLlmJson(
         response.on('error', (error) => finish(error))
       },
     )
-    request.on('error', (error) => finish(error))
+    request.on('error', (error) =>
+      finish(
+        error.message.startsWith('LLM_')
+          ? error
+          : new LlmHttpError('LLM_CONNECTION_FAILED'),
+      ),
+    )
     request.setTimeout(options.timeoutMs, () =>
-      request.destroy(new Error('LLM_TIMEOUT')),
+      request.destroy(new LlmHttpError('LLM_TIMEOUT')),
     )
     const totalTimer = setTimeout(
-      () => request.destroy(new Error('LLM_TIMEOUT')),
+      () => request.destroy(new LlmHttpError('LLM_TIMEOUT')),
       options.timeoutMs,
     )
     request.end(method === 'POST' ? body : undefined)
@@ -139,6 +163,6 @@ export async function requestLlmJson(
   try {
     return JSON.parse(raw)
   } catch {
-    throw new Error('LLM_RESPONSE_INVALID')
+    throw new LlmHttpError('LLM_RESPONSE_INVALID')
   }
 }

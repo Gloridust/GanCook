@@ -16,6 +16,7 @@ import {
   type PublicLlmConfig,
 } from '@/lib/llm/config'
 import { discoverLlmModels as fetchLlmModels } from '@/lib/llm/models'
+import { llmDiscoveryErrorKey } from '@/lib/llm/discovery-error'
 import {
   getStoredLlmConfig,
   LLM_SETTING_KEYS,
@@ -125,8 +126,8 @@ export async function discoverLlmModels(input: {
     )
     const models = await fetchLlmModels(requestConfig)
     return { ok: true, models }
-  } catch {
-    return { ok: false, error: t('err.llmModelsFailed') }
+  } catch (error) {
+    return { ok: false, error: t(llmDiscoveryErrorKey(error)) }
   }
 }
 
