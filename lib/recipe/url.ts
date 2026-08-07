@@ -1,4 +1,5 @@
-const TRAILING_SHARE_PUNCTUATION = /[)\]}>，。！？；：、,.!?;:'"”’]+$/
+const TRAILING_SHARE_PUNCTUATION =
+  /[)\]}>）】》」』，。！？；：、,.!?;:'"”’]+$/
 
 function normalizeRecipeUrl(url: URL): URL {
   if (
@@ -11,7 +12,9 @@ function normalizeRecipeUrl(url: URL): URL {
 }
 
 export function extractHttpUrl(input: string): string | null {
-  const matches = input.match(/https?:\/\/[^\s<>"'，。！？；：、]+/gi)
+  const matches = input.match(
+    /https?:\/\/[^\s<>"'）】》」』，。！？；：、]+/gi,
+  )
   if (!matches) return null
 
   for (const match of matches) {

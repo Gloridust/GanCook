@@ -14,7 +14,7 @@ import {
   extractRecipeFromHtml,
   htmlToVisibleText,
   isUsableRecipeDraft,
-  mergeRecipeDrafts,
+  organizeRecipeDraftWithLlm,
   parseRecipeJsonLd,
   type RecipeDraft,
 } from '@/lib/recipe/parse'
@@ -121,25 +121,26 @@ export async function importRecipeFromUrl(input: {
       page.contentType,
       page.finalUrl,
     )
-    let draft = parsed.draft
     const llmConfig = getStoredLlmConfig()
-    let llmWarning = false
-    if (
-      llmConfig.enabled &&
-      (!draft.name || !draft.instructions)
-    ) {
-      try {
-        const llmDraft = await extractRecipeWithLlm(
-          llmConfig,
-          page.finalUrl,
-          parsed.visibleText,
-        )
-        draft = mergeRecipeDrafts(draft, llmDraft)
-      } catch (error) {
-        logRecipeImportFailure('llm_extract', llmConfig.baseUrl, error)
-        llmWarning = true
-      }
-    }
+    const organized = await organizeRecipeDraftWithLlm(
+      parsed.draft,
+      llmConfig.enabled,
+      async (structuredDraft) => {
+        try {
+          return await extractRecipeWithLlm(
+            llmConfig,
+            page.finalUrl,
+            parsed.visibleText,
+            structuredDraft,
+          )
+        } catch (error) {
+          logRecipeImportFailure('llm_extract', llmConfig.baseUrl, error)
+          throw error
+        }
+      },
+    )
+    const draft = organized.draft
+    const llmWarning = organized.llmWarning
 
     if (!isUsableRecipeDraft(draft)) {
       return {

@@ -1,3 +1,5 @@
+import { extractXiaohongshuRecipeFromHtml } from './xiaohongshu'
+
 export type RecipeDraft = {
   name: string
   description: string
@@ -186,15 +188,43 @@ export function isUsableRecipeDraft(draft: RecipeDraft): boolean {
 }
 
 export function mergeRecipeDrafts(
-  primary: RecipeDraft,
-  fallback: RecipeDraft,
+  structured: RecipeDraft,
+  llm: RecipeDraft,
 ): RecipeDraft {
+  let llmImage: string | null = null
+  if (llm.imageUrl) {
+    try {
+      const parsed = new URL(llm.imageUrl)
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        llmImage = parsed.toString()
+      }
+    } catch {
+      // Keep the structured image when the LLM did not return an absolute URL.
+    }
+  }
   return {
-    name: primary.name || fallback.name,
-    description: primary.description || fallback.description,
-    instructions: primary.instructions || fallback.instructions,
-    tags: [...new Set([...primary.tags, ...fallback.tags])].slice(0, 6),
-    imageUrl: primary.imageUrl || fallback.imageUrl,
+    name: llm.name || structured.name,
+    description: llm.description || structured.description,
+    instructions: llm.instructions || structured.instructions,
+    tags: [...new Set([...llm.tags, ...structured.tags])].slice(0, 6),
+    imageUrl: llmImage || structured.imageUrl,
+  }
+}
+
+export async function organizeRecipeDraftWithLlm(
+  structured: RecipeDraft,
+  enabled: boolean,
+  organize: (draft: RecipeDraft) => Promise<RecipeDraft>,
+): Promise<{ draft: RecipeDraft; llmWarning: boolean }> {
+  if (!enabled) return { draft: structured, llmWarning: false }
+  try {
+    const llm = await organize(structured)
+    return {
+      draft: mergeRecipeDrafts(structured, llm),
+      llmWarning: false,
+    }
+  } catch {
+    return { draft: structured, llmWarning: true }
   }
 }
 
@@ -261,6 +291,9 @@ export function extractRecipeFromHtml(
       // Invalid JSON-LD should not prevent metadata fallback.
     }
   }
+
+  const xiaohongshu = extractXiaohongshuRecipeFromHtml(html, pageUrl)
+  if (xiaohongshu) return xiaohongshu
 
   const meta = metadata(html)
   const titleMatch = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)

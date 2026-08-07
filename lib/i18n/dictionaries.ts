@@ -133,7 +133,7 @@ const zh: Messages = {
   'dishform.tags': '标签（空格分隔，可选）',
   'dishform.tagsPh': '家常 荤菜 下饭',
   'dishform.importTitle': '从菜谱链接导入',
-  'dishform.importPh': '粘贴下厨房分享文本，或任意 HTTP/HTTPS 菜谱链接',
+  'dishform.importPh': '粘贴下厨房、小红书分享文本，或任意菜谱链接',
   'dishform.import': '解析并预填',
   'dishform.imported': '已解析，请检查内容后再添加。',
   'dishform.importedImageWarning':
@@ -409,7 +409,7 @@ const en: Messages = {
   'dishform.tagsPh': 'homey meaty',
   'dishform.importTitle': 'Import from recipe URL',
   'dishform.importPh':
-    'Paste Xiachufang share text or any HTTP/HTTPS recipe URL',
+    'Paste Xiachufang or Xiaohongshu share text, or any recipe URL',
   'dishform.import': 'Parse and prefill',
   'dishform.imported': 'Parsed. Review the fields before adding.',
   'dishform.importedImageWarning':
