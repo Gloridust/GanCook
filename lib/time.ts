@@ -3,12 +3,14 @@ import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
 import customParseFormat from 'dayjs/plugin/customParseFormat'
 import 'dayjs/locale/zh-cn'
-import { TIMEZONE } from '@/lib/env'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
 dayjs.extend(customParseFormat)
 dayjs.locale('zh-cn')
+
+// 不从 lib/env 引入：本文件也被客户端组件使用，而 lib/env 依赖 node:fs
+const TIMEZONE = process.env.TZ || 'Asia/Shanghai'
 
 export { dayjs }
 

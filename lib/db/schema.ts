@@ -42,6 +42,7 @@ export const dishes = sqliteTable(
       .$defaultFn(() => crypto.randomUUID()),
     name: text('name').notNull(),
     description: text('description'),
+    instructions: text('instructions'),
     // 图片相对路径，如 dishes/<uuid>.webp（落盘存储，非 base64）
     imagePath: text('image_path'),
     // 标签：荤/素/汤/主食 等，JSON 数组存储
@@ -113,6 +114,8 @@ export const orders = sqliteTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    // 份数（如「包子 ×5」）；同一人同一道菜只占一行，靠份数累加
+    quantity: integer('quantity').notNull().default(1),
     note: text('note'),
     createdAt: integer('created_at').notNull().default(now),
   },

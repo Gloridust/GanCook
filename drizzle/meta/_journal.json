@@ -8,6 +8,20 @@
       "when": 1782056387600,
       "tag": "0000_material_crusher_hogan",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1786005058605,
+      "tag": "0001_plain_harpoon",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794077509885,
+      "tag": "0002_order_quantity",
+      "breakpoints": true
     }
   ]
 }

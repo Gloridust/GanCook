@@ -31,8 +31,8 @@ export function tick(): TickResult {
     .all()
 
   for (const s of schedules) {
-    // 检查未来 3 天内的候选日期（覆盖较大的提前量）
-    for (let offset = 0; offset <= 2; offset++) {
+    // 检查今天起未来 3 天的候选日期（规则提前量上限 72h，需要覆盖到 +3 天）
+    for (let offset = 0; offset <= 3; offset++) {
       const day = dayjs().tz(tz).add(offset, 'day')
       const date = day.format('YYYY-MM-DD')
       if (!s.weekdays.includes(day.day())) continue

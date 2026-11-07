@@ -1,9 +1,9 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db/client'
-import { meals, orders } from '@/lib/db/schema'
+import { dishes, meals, orders } from '@/lib/db/schema'
 import { getCurrentUser } from '@/lib/auth/user'
 import { getSettings } from '@/lib/settings'
 import { getMeal } from '@/lib/meals'
@@ -102,39 +102,92 @@ export async function setMealStatus(
   return { ok: true }
 }
 
-/** 点 / 取消点 一道菜（仅在点菜开放且未截止时） */
-export async function toggleOrder(
+const MAX_QTY = 99
+
+function orderingGuard(mealId: string): 'notFound' | 'closed' | null {
+  const meal = getMeal(mealId)
+  if (!meal) return 'notFound'
+  if (meal.status !== 'ordering' || nowSec() >= meal.orderDeadline) return 'closed'
+  return null
+}
+
+function revalidateMeal(mealId: string) {
+  revalidatePath(`/meals/${mealId}`)
+  revalidatePath('/meals')
+  revalidatePath('/home')
+}
+
+/**
+ * 设置我在某饭局对某道菜的份数（0 = 取消）。仅在点菜开放且未截止时。
+ * 份数支持「包子 ×5」这类早餐场景。
+ */
+export async function setOrderQuantity(
   mealId: string,
   dishId: string,
+  quantity: number,
 ): Promise<ActionResult> {
   const t = await getT()
   const me = await getCurrentUser()
   if (!me) return { ok: false, error: t('err.loginRequired') }
-  const meal = getMeal(mealId)
-  if (!meal) return { ok: false, error: t('err.mealNotFound') }
-  if (meal.status !== 'ordering' || nowSec() >= meal.orderDeadline)
-    return { ok: false, error: t('err.orderClosed') }
+  const guard = orderingGuard(mealId)
+  if (guard === 'notFound') return { ok: false, error: t('err.mealNotFound') }
+  if (guard === 'closed') return { ok: false, error: t('err.orderClosed') }
 
-  const existing = db
-    .select({ id: orders.id })
-    .from(orders)
-    .where(
-      and(
-        eq(orders.mealId, mealId),
-        eq(orders.dishId, dishId),
-        eq(orders.userId, me.id),
-      ),
-    )
-    .get()
+  const qty = Math.max(0, Math.min(MAX_QTY, Math.floor(Number(quantity) || 0)))
+  const mine = and(
+    eq(orders.mealId, mealId),
+    eq(orders.dishId, dishId),
+    eq(orders.userId, me.id),
+  )
 
-  if (existing) {
-    db.delete(orders).where(eq(orders.id, existing.id)).run()
+  if (qty === 0) {
+    db.delete(orders).where(mine).run()
   } else {
+    const dish = db
+      .select({ id: dishes.id })
+      .from(dishes)
+      .where(and(eq(dishes.id, dishId), eq(dishes.status, 'active')))
+      .get()
+    if (!dish) return { ok: false, error: t('err.dishNotFound') }
     db.insert(orders)
-      .values({ mealId, dishId, userId: me.id })
+      .values({ mealId, dishId, userId: me.id, quantity: qty })
+      .onConflictDoUpdate({
+        target: [orders.mealId, orders.dishId, orders.userId],
+        set: { quantity: qty },
+      })
       .run()
   }
-  revalidatePath(`/meals/${mealId}`)
-  revalidatePath('/home')
+  revalidateMeal(mealId)
+  return { ok: true }
+}
+
+/** 一次点上多道菜（「随便来点」一键全点）。已点过的保持原份数。 */
+export async function addOrders(
+  mealId: string,
+  dishIds: string[],
+): Promise<ActionResult> {
+  const t = await getT()
+  const me = await getCurrentUser()
+  if (!me) return { ok: false, error: t('err.loginRequired') }
+  const guard = orderingGuard(mealId)
+  if (guard === 'notFound') return { ok: false, error: t('err.mealNotFound') }
+  if (guard === 'closed') return { ok: false, error: t('err.orderClosed') }
+
+  const ids = [...new Set(dishIds)].slice(0, 20)
+  if (ids.length === 0) return { ok: true }
+  const valid = db
+    .select({ id: dishes.id })
+    .from(dishes)
+    .where(and(inArray(dishes.id, ids), eq(dishes.status, 'active')))
+    .all()
+  db.transaction((tx) => {
+    for (const d of valid) {
+      tx.insert(orders)
+        .values({ mealId, dishId: d.id, userId: me.id, quantity: 1 })
+        .onConflictDoNothing()
+        .run()
+    }
+  })
+  revalidateMeal(mealId)
   return { ok: true }
 }

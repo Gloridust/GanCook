@@ -34,6 +34,19 @@ export function setSetting(key: string, value: string): void {
     .run()
 }
 
+export function setSettings(
+  values: ReadonlyArray<readonly [key: string, value: string]>,
+): void {
+  db.transaction((tx) => {
+    for (const [key, value] of values) {
+      tx.insert(settings)
+        .values({ key, value })
+        .onConflictDoUpdate({ target: settings.key, set: { value } })
+        .run()
+    }
+  })
+}
+
 export function getSettings(): FamilySettings {
   const rows = db.select().from(settings).all()
   const map = new Map(rows.map((r) => [r.key, r.value ?? '']))

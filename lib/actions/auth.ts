@@ -10,6 +10,11 @@ import { getCurrentUser, isSetupNeeded, getUserByName } from '@/lib/auth/user'
 import { getSettings, setSetting } from '@/lib/settings'
 import { seedDefaultSchedules } from '@/lib/seed'
 import { getT } from '@/lib/i18n/server'
+import {
+  loginRetryAfter,
+  recordLoginFailure,
+  clearLoginFailures,
+} from '@/lib/auth/rate-limit'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
@@ -85,10 +90,17 @@ export async function login(input: {
   const t = await getT()
   if (isSetupNeeded()) redirect('/setup')
 
-  const user = getUserByName(input.name.trim())
-  if (!user) return { ok: false, error: t('err.badCredentials') }
-  const valid = await verifyPassword(input.pin, user.passwordHash)
-  if (!valid) return { ok: false, error: t('err.badCredentials') }
+  const name = input.name.trim()
+  const wait = loginRetryAfter(name)
+  if (wait > 0) return { ok: false, error: t('err.tooManyAttempts', { s: wait }) }
+
+  const user = getUserByName(name)
+  const valid = user ? await verifyPassword(input.pin, user.passwordHash) : false
+  if (!user || !valid) {
+    recordLoginFailure(name)
+    return { ok: false, error: t('err.badCredentials') }
+  }
+  clearLoginFailures(name)
 
   await createSession({
     userId: user.id,
@@ -115,8 +127,13 @@ export async function changePassword(input: {
   if (!me) return { ok: false, error: t('err.loginRequired') }
 
   if (!isPin(input.newPin)) return { ok: false, error: t('err.pin6') }
+  const wait = loginRetryAfter(me.name)
+  if (wait > 0) return { ok: false, error: t('err.tooManyAttempts', { s: wait }) }
   const valid = await verifyPassword(input.oldPin, me.passwordHash)
-  if (!valid) return { ok: false, error: t('err.oldPinWrong') }
+  if (!valid) {
+    recordLoginFailure(me.name)
+    return { ok: false, error: t('err.oldPinWrong') }
+  }
 
   const passwordHash = await hashPassword(input.newPin)
   db.update(users).set({ passwordHash }).where(eq(users.id, me.id)).run()

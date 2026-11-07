@@ -1,0 +1,1 @@
+ALTER TABLE `dishes` ADD `instructions` text;

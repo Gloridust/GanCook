@@ -1,8 +1,16 @@
 'use client'
 
-import { useRef, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { ImagePlus, Trash2, Archive, ArchiveRestore } from 'lucide-react'
+import {
+  ImagePlus,
+  Plus,
+  Trash2,
+  Archive,
+  ArchiveRestore,
+  Link2,
+  Download,
+} from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -12,7 +20,9 @@ import {
 import { Input, Textarea } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { useT } from '@/components/i18n-provider'
+import { useT, useLocale } from '@/components/i18n-provider'
+import { PRESET_TAGS, PRESET_TAGS_EN } from '@/lib/dish-categories'
+import { cn } from '@/lib/utils'
 import { compressImage } from '@/lib/client/compress-image'
 import {
   createDish,
@@ -20,37 +30,175 @@ import {
   deleteDish,
   setDishStatus,
 } from '@/lib/actions/dishes'
+import {
+  discardImportedRecipeImage,
+  importRecipeFromUrl,
+} from '@/lib/actions/recipe-import'
+import {
+  importProgressPhaseAt,
+  type ImportProgressPhase,
+} from '@/lib/recipe/import-progress'
 import type { Dish } from '@/lib/db/schema'
+
+const IMPORT_PROGRESS_KEYS: Record<ImportProgressPhase, string> = {
+  cleaning: 'dishform.importProgressCleaning',
+  fetching: 'dishform.importProgressFetching',
+  extracting: 'dishform.importProgressExtracting',
+  image: 'dishform.importProgressImage',
+}
+
+function splitTags(raw: string): string[] {
+  return raw
+    .split(/[,，\s]+/)
+    .map((x) => x.trim())
+    .filter(Boolean)
+}
 
 export function DishForm({
   mode,
   dish,
   children,
+  open: openProp,
+  onOpenChange,
+  suggestedTags = [],
 }: {
   mode: 'create' | 'edit'
   dish?: Dish
-  children: React.ReactNode
+  /** 触发器；不传时由 open/onOpenChange 受控（整页只挂一个表单，避免每道菜一个实例） */
+  children?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  /** 菜品库里已有的标签，作为快捷选项 */
+  suggestedTags?: string[]
 }) {
   const router = useRouter()
   const t = useT()
+  const locale = useLocale()
   const fileRef = useRef<HTMLInputElement>(null)
-  const [open, setOpen] = useState(false)
+  const [openState, setOpenState] = useState(false)
+  const open = openProp ?? openState
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  // 链接导入是进阶用法：默认收起成一行，不占手动添加的位置
+  const [showImport, setShowImport] = useState(false)
+  const [showInstructions, setShowInstructions] = useState(
+    Boolean(dish?.instructions),
+  )
   const [name, setName] = useState(dish?.name ?? '')
   const [description, setDescription] = useState(dish?.description ?? '')
+  const [instructions, setInstructions] = useState(dish?.instructions ?? '')
   const [tags, setTags] = useState((dish?.tags ?? []).join(' '))
   const [blob, setBlob] = useState<Blob | null>(null)
   const [preview, setPreview] = useState<string | null>(
     dish?.imagePath ? `/api/uploads/${dish.imagePath}` : null,
   )
   const [error, setError] = useState('')
+  const [importText, setImportText] = useState('')
+  const [importedImageToken, setImportedImageToken] = useState<string | null>(
+    null,
+  )
+  const [importNotice, setImportNotice] = useState('')
+  const [importProgress, setImportProgress] =
+    useState<ImportProgressPhase | null>(null)
   const [pending, startTransition] = useTransition()
+  const [importing, startImportTransition] = useTransition()
+  const openRef = useRef(false)
+  const mountedRef = useRef(true)
+  const importTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const objectPreviewRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (importTimerRef.current) clearInterval(importTimerRef.current)
+      if (objectPreviewRef.current) URL.revokeObjectURL(objectPreviewRef.current)
+    }
+  }, [])
+
+  const stopImportProgress = () => {
+    if (importTimerRef.current) {
+      clearInterval(importTimerRef.current)
+      importTimerRef.current = null
+    }
+    if (mountedRef.current) setImportProgress(null)
+  }
+
+  const startImportProgress = () => {
+    stopImportProgress()
+    const startedAt = Date.now()
+    setImportProgress(importProgressPhaseAt(0))
+    importTimerRef.current = setInterval(() => {
+      if (!openRef.current) {
+        stopImportProgress()
+        return
+      }
+      setImportProgress(importProgressPhaseAt(Date.now() - startedAt))
+    }, 500)
+  }
+
+  const setObjectPreview = (value: string | null) => {
+    if (objectPreviewRef.current) URL.revokeObjectURL(objectPreviewRef.current)
+    objectPreviewRef.current = value
+    setPreview(value)
+  }
 
   const pick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
     if (!f) return
     const compressed = await compressImage(f)
+    if (importedImageToken) {
+      void discardImportedRecipeImage(importedImageToken)
+      setImportedImageToken(null)
+    }
     setBlob(compressed)
-    setPreview(URL.createObjectURL(compressed))
+    setObjectPreview(URL.createObjectURL(compressed))
+  }
+
+  const runImport = () => {
+    setError('')
+    setImportNotice('')
+    startImportProgress()
+    startImportTransition(async () => {
+      try {
+        const res = await importRecipeFromUrl({
+          shareText: importText,
+          previousImageToken: importedImageToken,
+        })
+        if (!res.ok) {
+          if (openRef.current) setError(res.error)
+          return
+        }
+        if (!openRef.current) {
+          void discardImportedRecipeImage(res.recipe.imageToken)
+          return
+        }
+        setName(res.recipe.name)
+        setDescription(res.recipe.description)
+        setInstructions(res.recipe.instructions)
+        if (res.recipe.instructions) setShowInstructions(true)
+        setTags(res.recipe.tags.join(' '))
+        setBlob(null)
+        setImportedImageToken(res.recipe.imageToken)
+        setObjectPreview(null)
+        setPreview(
+          res.recipe.imagePreviewPath && res.recipe.imageToken
+            ? `/api/uploads/${res.recipe.imagePreviewPath}?token=${encodeURIComponent(res.recipe.imageToken)}`
+            : null,
+        )
+        setImportNotice(
+          res.recipe.llmWarning
+            ? t('dishform.importedLlmWarning')
+            : res.recipe.imageWarning
+              ? t('dishform.importedImageWarning')
+              : t('dishform.imported'),
+        )
+      } catch {
+        // 网络中断 / 反代超时（504）等：给出可读提示而不是抛到错误边界
+        if (openRef.current) setError(t('err.recipeFetchFailed'))
+      } finally {
+        stopImportProgress()
+      }
+    })
   }
 
   const submit = () => {
@@ -59,21 +207,30 @@ export function DishForm({
     const form = new FormData()
     form.set('name', name)
     form.set('description', description)
+    form.set('instructions', instructions)
     form.set('tags', tags)
     if (blob) form.set('image', blob, 'dish.jpg')
+    if (importedImageToken) {
+      form.set('importedImageToken', importedImageToken)
+    }
     startTransition(async () => {
       const res =
         mode === 'create'
           ? await createDish(form)
           : await updateDish(dish!.id, form)
       if (res.ok) {
-        setOpen(false)
+        close()
         if (mode === 'create') {
           setName('')
           setDescription('')
+          setInstructions('')
           setTags('')
           setBlob(null)
+          setObjectPreview(null)
           setPreview(null)
+          setImportText('')
+          setImportedImageToken(null)
+          setImportNotice('')
         }
         router.refresh()
       } else {
@@ -85,29 +242,129 @@ export function DishForm({
   const runStatus = (status: 'active' | 'archived') =>
     startTransition(async () => {
       await setDishStatus(dish!.id, status)
-      setOpen(false)
+      close()
       router.refresh()
     })
 
-  const runDelete = () =>
+  const runDelete = () => {
+    // 两步确认：误触一下不至于把菜删掉
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      setTimeout(() => setConfirmDelete(false), 3000)
+      return
+    }
     startTransition(async () => {
       await deleteDish(dish!.id)
-      setOpen(false)
+      close()
       router.refresh()
     })
+  }
+
+  const tagList = splitTags(tags)
+  const toggleTag = (tag: string) => {
+    const has = tagList.includes(tag)
+    setTags((has ? tagList.filter((x) => x !== tag) : [...tagList, tag].slice(0, 6)).join(' '))
+  }
+  const presets = locale === 'en' ? PRESET_TAGS_EN : PRESET_TAGS
+  const tagOptions = [...new Set([...presets, ...suggestedTags, ...tagList])].slice(0, 18)
+
+  /** 保存成功后关闭（导入图片已被保存占用，不能再丢弃） */
+  function close() {
+    openRef.current = false
+    stopImportProgress()
+    setConfirmDelete(false)
+    onOpenChange?.(false)
+    if (openProp === undefined) setOpenState(false)
+  }
+
+  const changeOpen = (next: boolean) => {
+    openRef.current = next
+    if (!next) {
+      stopImportProgress()
+      setConfirmDelete(false)
+    }
+    if (!next && mode === 'create' && importedImageToken) {
+      void discardImportedRecipeImage(importedImageToken)
+      setImportedImageToken(null)
+      setObjectPreview(null)
+      setPreview(null)
+    }
+    onOpenChange?.(next)
+    if (openProp === undefined) setOpenState(next)
+  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    <Dialog open={open} onOpenChange={changeOpen}>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent
         title={mode === 'create' ? t('dishform.addTitle') : t('dishform.editTitle')}
+        className="max-h-[90dvh] overflow-y-auto"
       >
         <div className="space-y-4">
+          {mode === 'create' && !showImport && (
+            <button
+              type="button"
+              onClick={() => setShowImport(true)}
+              className="mf-tonal mf-pressable flex w-full items-center gap-2 rounded-2xl px-3.5 py-3 text-left text-sm font-semibold text-accent"
+            >
+              <Link2 className="h-4 w-4 shrink-0" />
+              <span className="flex-1">{t('dishform.importTitle')}</span>
+              <Plus className="h-4 w-4 shrink-0" />
+            </button>
+          )}
+          {mode === 'create' && showImport && (
+            <div className="mf-tonal space-y-3 rounded-2xl p-3.5">
+              <div className="flex items-center gap-2 text-sm font-semibold text-accent">
+                <Link2 className="h-4 w-4" />
+                {t('dishform.importTitle')}
+              </div>
+              <Textarea
+                value={importText}
+                onChange={(event) => setImportText(event.target.value)}
+                placeholder={t('dishform.importPh')}
+                className="min-h-[72px] bg-surface"
+                maxLength={2_000}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="w-full"
+                loading={importing}
+                disabled={!importText.trim()}
+                onClick={runImport}
+              >
+                <Download className="h-4 w-4" />
+                {t('dishform.import')}
+              </Button>
+              {importProgress && (
+                <div
+                  className="flex items-center justify-center gap-2 text-xs text-secondary"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  <span
+                    className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent"
+                    aria-hidden="true"
+                  />
+                  {t(IMPORT_PROGRESS_KEYS[importProgress])}
+                </div>
+              )}
+              {importNotice && (
+                <p className="text-xs text-secondary">{importNotice}</p>
+              )}
+            </div>
+          )}
+
           {/* 图片 */}
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-2xl mf-inset"
+            className={cn(
+              'relative flex w-full items-center justify-center overflow-hidden rounded-2xl mf-inset',
+              preview ? 'aspect-[4/3]' : 'h-24',
+            )}
           >
             {preview ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -117,8 +374,8 @@ export function DishForm({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <span className="flex flex-col items-center gap-1.5 text-secondary">
-                <ImagePlus className="h-7 w-7" />
+              <span className="flex items-center gap-2 text-secondary">
+                <ImagePlus className="h-6 w-6" />
                 <span className="text-sm">{t('dishform.photo')}</span>
               </span>
             )}
@@ -142,6 +399,36 @@ export function DishForm({
             />
           </div>
           <div>
+            <Label htmlFor="dish-tags">{t('dishform.tags')}</Label>
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {tagOptions.map((tag) => {
+                const on = tagList.includes(tag)
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    aria-pressed={on}
+                    className={cn(
+                      'rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors',
+                      on
+                        ? 'bg-accent-strong text-white'
+                        : 'bg-trough text-secondary active:bg-black/10',
+                    )}
+                  >
+                    {tag}
+                  </button>
+                )
+              })}
+            </div>
+            <Input
+              id="dish-tags"
+              placeholder={t('dishform.tagsPh')}
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+            />
+          </div>
+          <div>
             <Label htmlFor="dish-desc">{t('dishform.note')}</Label>
             <Textarea
               id="dish-desc"
@@ -151,19 +438,39 @@ export function DishForm({
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
+          {!showInstructions ? (
+            <button
+              type="button"
+              onClick={() => setShowInstructions(true)}
+              className="inline-flex items-center gap-1 text-sm font-medium text-accent"
+            >
+              <Plus className="h-4 w-4" />
+              {t('dishform.addInstructions')}
+            </button>
+          ) : (
           <div>
-            <Label htmlFor="dish-tags">{t('dishform.tags')}</Label>
-            <Input
-              id="dish-tags"
-              placeholder={t('dishform.tagsPh')}
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
+            <Label htmlFor="dish-instructions">
+              {t('dishform.instructions')}
+            </Label>
+            <Textarea
+              id="dish-instructions"
+              placeholder={t('dishform.instructionsPh')}
+              value={instructions}
+              maxLength={50000}
+              className="min-h-40 leading-6"
+              onChange={(e) => setInstructions(e.target.value)}
             />
           </div>
-
+          )}
           {error && <p className="text-sm text-danger">{error}</p>}
 
-          <Button className="w-full" size="lg" loading={pending} onClick={submit}>
+          <Button
+            className="w-full"
+            size="lg"
+            loading={pending}
+            disabled={importing}
+            onClick={submit}
+          >
             {mode === 'create' ? t('common.add') : t('common.save')}
           </Button>
 
@@ -197,7 +504,7 @@ export function DishForm({
                 onClick={runDelete}
               >
                 <Trash2 className="h-4 w-4" />
-                {t('common.delete')}
+                {confirmDelete ? t('dishform.confirmDelete') : t('common.delete')}
               </Button>
             </div>
           )}
