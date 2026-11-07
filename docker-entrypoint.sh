@@ -15,7 +15,7 @@ gen() {
 # （数据目录不可写时不让脚本 set -e 中断，退化为本次临时密钥，下方会给出明确提示）
 load_secret() {
   f="$DATA_DIR/$1.secret"
-  [ -s "$f" ] || gen > "$f" 2>/dev/null || true
+  [ -s "$f" ] || (gen > "$f") 2>/dev/null || true
   if [ -s "$f" ]; then cat "$f"; else gen; fi
 }
 if [ -z "$AUTH_SECRET" ]; then

@@ -31,6 +31,10 @@ all data lives on your own NAS.
 - 👨‍👩‍👧 **One account, many roles** — no role at signup; anyone can cook or order. The cook is claimed **per meal**.
 - 👆 **Tap-to-login** — on a shared device, pick your avatar and enter a 6-digit code; no typing.
 - ⏰ **Auto meals (like alarms)** — add as many rules as you like: meal, time, how early to open, how early to close, and which weekdays. Auto-opens, auto-advances, auto-completes.
+- 🔎 **Easy ordering with a big menu** — search, filter by tag (meat / veggie / soup…), list or grid view, and quantities ("5 buns").
+- 🎲 **Surprise me** — pick a mix like "1 meat, 1 veggie, 1 soup" and get a random menu; recently eaten dishes come up less.
+- 📦 **Menu import / export** — share your whole menu (with photos) as a zip, or import a zip of photos (file name = dish name) or a plain text list.
+- 🔗 **Recipe link import** — paste a recipe link to pre-fill name, steps and cover (optional LLM clean-up).
 - 🌱 **Contribution wall** — GitHub-style heatmaps for cooking & ordering.
 - 🖼️ **Fast images** — dish photos are compressed to WebP and stored on disk (no base64-in-DB).
 - 🥛 **"Milk Fabric" UI** — soft neumorphism, mobile-first, installable as a PWA.
@@ -57,6 +61,22 @@ Or with compose:
 curl -O https://raw.githubusercontent.com/Gloridust/GanCook/main/docker-compose.yml
 docker compose up -d
 ```
+
+### Reverse proxy
+
+Plain IP:port and NAS remote access (including NAS phone apps) work out of the box. Behind your own nginx, forward the usual headers:
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    client_max_body_size 64m;   # menu zip imports
+}
+```
+
+Login has built-in brute-force protection; if you expose it to the internet, also set a join code or close registration in Family settings.
 
 ## 🔄 Upgrade
 

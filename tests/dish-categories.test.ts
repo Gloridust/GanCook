@@ -8,6 +8,8 @@ test('dishEmoji prefers concrete food in the name, then tags', () => {
   // 「鱼香肉丝」没有鱼
   assert.equal(dishEmoji(['荤菜'], '鱼香肉丝'), '🍖')
   assert.equal(dishEmoji(['汤'], '番茄蛋花汤'), '🍲')
+  assert.equal(dishEmoji(['早餐'], '鸡蛋饼'), '🫓')
+  assert.equal(dishEmoji(['素菜'], '番茄炒蛋'), '🍳')
   assert.equal(dishEmoji(['Dessert'], 'Tiramisu'), '🍮')
   assert.equal(dishEmoji([], '神秘料理'), '🍽️')
 })
