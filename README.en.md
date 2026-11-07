@@ -45,6 +45,8 @@ all data lives on your own NAS.
 
 Image: `gloridust/gancook:latest` (Docker Hub) or `ghcr.io/gloridust/gancook:latest` (GHCR).
 
+`:latest` always points to the newest **stable release** (pin with `:0.2.1` / `:0.2` if you like); `:main` tracks the main branch for early testers.
+
 ```bash
 docker run -d --name gancook \
   -p 3000:3000 \

@@ -98,6 +98,8 @@
 - 🐳 **Docker Hub（国内飞牛等 NAS 有加速，推荐）**：`gloridust/gancook:latest`
 - 📦 GHCR（海外）：`ghcr.io/gloridust/gancook:latest`
 
+> `:latest` 始终是最新**正式版**（也可固定版本如 `:0.2.1`、`:0.2`）；`:main` 是跟随主分支的开发版，仅供尝鲜。
+
 ### 方式一：docker run（最简单）
 
 ```bash
