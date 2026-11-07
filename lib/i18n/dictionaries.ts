@@ -128,8 +128,22 @@ const zh: Messages = {
   'dishform.namePh': '番茄炒蛋',
   'dishform.note': '备注（可选）',
   'dishform.notePh': '少放点辣，多放葱花～',
+  'dishform.instructions': '教程 / 步骤（可选）',
+  'dishform.instructionsPh': '1. 备好食材\n2. 按步骤烹饪…',
   'dishform.tags': '标签（空格分隔，可选）',
   'dishform.tagsPh': '家常 荤菜 下饭',
+  'dishform.importTitle': '从菜谱链接导入',
+  'dishform.importPh': '粘贴下厨房、小红书分享文本，或任意菜谱链接',
+  'dishform.import': '解析并预填',
+  'dishform.importProgressCleaning': '正在清洗分享内容…',
+  'dishform.importProgressFetching': '正在抓取网页内容…',
+  'dishform.importProgressExtracting': '正在提炼菜谱信息…',
+  'dishform.importProgressImage': '正在处理封面图片…',
+  'dishform.imported': '已解析，请检查内容后再添加。',
+  'dishform.importedImageWarning':
+    '菜谱已解析，但封面无法安全下载；你可以手动添加照片。',
+  'dishform.importedLlmWarning':
+    '已导入网页中的结构化内容，但 LLM 辅助调用失败，请检查配置和步骤。',
   'dishform.archive': '下架',
   'dishform.restore': '上架',
   // wall
@@ -187,6 +201,31 @@ const zh: Messages = {
   'admin.joinCode': '注册口令（可选）',
   'admin.joinCodePh': '留空则任何人都可注册',
   'admin.saveSettings': '保存设置',
+  'admin.llm': '菜谱解析助手',
+  'admin.llmDesc':
+    '当网页没有标准菜谱数据时，可用兼容 Chat Completions 的模型辅助提取。',
+  'admin.llmProvider': '服务商',
+  'admin.llmOpenAiCompatible': 'OpenAI 兼容（含 LiteLLM）',
+  'admin.llmOpenAiCompatibleDesc':
+    'LiteLLM 使用 OpenAI 兼容接口，无需单独选择厂商类型。',
+  'admin.llmBaseUrl': 'Base URL',
+  'admin.llmModel': '模型',
+  'admin.llmFetchModels': '获取模型',
+  'admin.llmModelsFound': '已获取 {n} 个模型',
+  'admin.llmChooseDiscovered': '选择已获取模型',
+  'admin.llmEnterCustom': '手动输入自定义模型',
+  'admin.llmModelCustomHint': '可从列表选择，也可手动输入自定义模型。',
+  'admin.llmApiKey': 'API Key',
+  'admin.llmApiKeyPh': '留空仅在 Base URL 未变时使用已保存密钥',
+  'admin.llmKeyConfigured': '已配置',
+  'admin.llmKeyMissing': '未配置',
+  'admin.llmAllowPrivateNetwork': '允许局域网 / HTTP 端点',
+  'admin.llmAllowPrivateNetworkDesc':
+    '默认关闭；开启后允许访问 localhost、私网地址和明文 HTTP。',
+  'admin.llmAllowPrivateNetworkWarning':
+    '安全提示：仅对你信任的自托管服务开启。HTTP 会以明文传输 API Key 和菜谱内容。',
+  'admin.llmEnabled': '启用 LLM 辅助',
+  'admin.llmEnabledDesc': '仅在结构化数据不足时调用',
   'admin.autoMeals': '自动饭局',
   'admin.autoMealsDesc':
     '到点自动开饭局让家人点菜，截止后自动进入做饭、用餐后自动完成。',
@@ -236,6 +275,19 @@ const zh: Messages = {
   'err.imageOnly': '只能上传图片',
   'err.imageTooLarge': '图片太大了',
   'err.dishNotFound': '菜品不存在',
+  'err.recipeUrlRequired': '请粘贴有效的 HTTP/HTTPS 菜谱链接',
+  'err.recipeFetchFailed': '无法安全访问这个菜谱链接',
+  'err.recipeParseFailed': '没有识别到菜谱内容，请换个链接或手动填写',
+  'err.recipeLlmFailed': '网页缺少可用菜谱内容，且 LLM 辅助调用失败，请检查配置',
+  'err.importBusy': '正在解析菜谱，请稍候再试',
+  'err.importImageExpired': '导入的封面已过期，请重新解析或手动上传',
+  'err.llmConfigInvalid': 'LLM 配置格式不正确',
+  'err.llmModelsAuthInvalid': 'API 密钥无效或无权访问，请检查后重试',
+  'err.llmModelsRateLimited': '请求过于频繁或额度受限，请稍后再试',
+  'err.llmModelsTimeout': '连接模型服务超时，请检查网络后重试',
+  'err.llmModelsResponseInvalid': '模型服务响应格式异常，请检查接口地址',
+  'err.llmModelsFailed': '无法获取模型，请检查地址、API Key 和安全开关',
+  'err.saveFailed': '保存失败，请重试',
   'err.mealNotFound': '饭局不存在',
   'err.dateFmt': '日期格式不对',
   'err.timeFmt': '时间格式不对',
@@ -362,8 +414,23 @@ const en: Messages = {
   'dishform.namePh': 'Tomato & eggs',
   'dishform.note': 'Note (optional)',
   'dishform.notePh': 'Less spicy, more scallions~',
+  'dishform.instructions': 'Instructions (optional)',
+  'dishform.instructionsPh': '1. Prepare the ingredients\n2. Cook step by step…',
   'dishform.tags': 'Tags (space-separated, optional)',
   'dishform.tagsPh': 'homey meaty',
+  'dishform.importTitle': 'Import from recipe URL',
+  'dishform.importPh':
+    'Paste Xiachufang or Xiaohongshu share text, or any recipe URL',
+  'dishform.import': 'Parse and prefill',
+  'dishform.importProgressCleaning': 'Cleaning the shared content…',
+  'dishform.importProgressFetching': 'Fetching the web page…',
+  'dishform.importProgressExtracting': 'Extracting recipe information…',
+  'dishform.importProgressImage': 'Processing the cover image…',
+  'dishform.imported': 'Parsed. Review the fields before adding.',
+  'dishform.importedImageWarning':
+    'The recipe was parsed, but its cover could not be downloaded safely. You can add a photo manually.',
+  'dishform.importedLlmWarning':
+    'Structured content was imported, but LLM assistance failed. Check the configuration and instructions.',
   'dishform.archive': 'Archive',
   'dishform.restore': 'Restore',
   'wall.title': 'Wall',
@@ -418,6 +485,33 @@ const en: Messages = {
   'admin.joinCode': 'Invite code (optional)',
   'admin.joinCodePh': 'Leave empty to allow anyone',
   'admin.saveSettings': 'Save settings',
+  'admin.llm': 'Recipe extraction assistant',
+  'admin.llmDesc':
+    'Use a Chat Completions-compatible model when a page has no standard recipe data.',
+  'admin.llmProvider': 'Provider',
+  'admin.llmOpenAiCompatible': 'OpenAI-compatible (including LiteLLM)',
+  'admin.llmOpenAiCompatibleDesc':
+    'LiteLLM uses the OpenAI-compatible API and does not need a separate provider type.',
+  'admin.llmBaseUrl': 'Base URL',
+  'admin.llmModel': 'Model',
+  'admin.llmFetchModels': 'Fetch models',
+  'admin.llmModelsFound': 'Found {n} models',
+  'admin.llmChooseDiscovered': 'Choose fetched model',
+  'admin.llmEnterCustom': 'Enter custom model',
+  'admin.llmModelCustomHint':
+    'Choose a discovered model or enter a custom model manually.',
+  'admin.llmApiKey': 'API key',
+  'admin.llmApiKeyPh':
+    'Leave blank to use the saved key only when the Base URL is unchanged',
+  'admin.llmKeyConfigured': 'Configured',
+  'admin.llmKeyMissing': 'Not configured',
+  'admin.llmAllowPrivateNetwork': 'Allow LAN / HTTP endpoints',
+  'admin.llmAllowPrivateNetworkDesc':
+    'Off by default; enables localhost, private addresses, and plaintext HTTP.',
+  'admin.llmAllowPrivateNetworkWarning':
+    'Security warning: enable only for services you trust. HTTP sends the API key and recipe content in plaintext.',
+  'admin.llmEnabled': 'Enable LLM assistance',
+  'admin.llmEnabledDesc': 'Called only when structured data is incomplete',
   'admin.autoMeals': 'Auto meals',
   'admin.autoMealsDesc':
     'Auto-opens meals on schedule; advances to cooking after the deadline and done after the meal.',
@@ -464,6 +558,27 @@ const en: Messages = {
   'err.imageOnly': 'Images only',
   'err.imageTooLarge': 'Image is too large',
   'err.dishNotFound': 'Dish not found',
+  'err.recipeUrlRequired': 'Paste a valid HTTP/HTTPS recipe URL',
+  'err.recipeFetchFailed': 'This recipe URL could not be accessed safely',
+  'err.recipeParseFailed':
+    'No recipe content was found. Try another URL or enter it manually',
+  'err.recipeLlmFailed':
+    'The page had no usable recipe data and LLM assistance failed. Check the configuration',
+  'err.importBusy': 'A recipe is already being parsed. Please wait',
+  'err.importImageExpired':
+    'The imported cover expired. Parse again or upload a photo',
+  'err.llmConfigInvalid': 'Invalid LLM configuration',
+  'err.llmModelsAuthInvalid':
+    'The API key is invalid or unauthorized. Check it and try again',
+  'err.llmModelsRateLimited':
+    'The service is rate-limiting requests or the quota is exhausted. Try again later',
+  'err.llmModelsTimeout':
+    'The model service connection timed out. Check the network and try again',
+  'err.llmModelsResponseInvalid':
+    'The model service returned an invalid response format. Check the endpoint',
+  'err.llmModelsFailed':
+    'Could not fetch models. Check the endpoint, API key, and security switch',
+  'err.saveFailed': 'Could not save. Please try again',
   'err.mealNotFound': 'Meal not found',
   'err.dateFmt': 'Invalid date',
   'err.timeFmt': 'Invalid time',

@@ -6,8 +6,21 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db/client'
 import { mealSchedules, users } from '@/lib/db/schema'
 import { getCurrentUser } from '@/lib/auth/user'
-import { setSetting } from '@/lib/settings'
+import { setSetting, setSettings } from '@/lib/settings'
 import { getT } from '@/lib/i18n/server'
+import {
+  buildLlmSettingUpdates,
+  resolveLlmRequestConfig,
+  toPublicLlmConfig,
+  type LlmConfigInput,
+  type PublicLlmConfig,
+} from '@/lib/llm/config'
+import { discoverLlmModels as fetchLlmModels } from '@/lib/llm/models'
+import { llmDiscoveryErrorKey } from '@/lib/llm/discovery-error'
+import {
+  getStoredLlmConfig,
+  LLM_SETTING_KEYS,
+} from '@/lib/llm/settings'
 import type { User } from '@/lib/db/schema'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
@@ -40,6 +53,82 @@ export async function updateFamilySettings(input: {
   revalidatePath('/admin')
   revalidatePath('/login')
   return { ok: true }
+}
+
+const llmSettingsSchema = z.object({
+  provider: z.enum(['deepseek', 'openai']),
+  baseUrl: z.string().max(500),
+  model: z.string().max(100),
+  apiKey: z.string().max(500),
+  enabled: z.boolean(),
+  allowPrivateNetwork: z.boolean(),
+})
+
+export async function updateLlmSettings(
+  input: LlmConfigInput,
+): Promise<
+  | { ok: true; config: PublicLlmConfig }
+  | { ok: false; error: string }
+> {
+  const t = await getT()
+  const r = await requireAdminUser()
+  if (!r.ok) return r
+  const parsed = llmSettingsSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: t('err.llmConfigInvalid') }
+
+  let updated
+  try {
+    updated = buildLlmSettingUpdates(getStoredLlmConfig(), parsed.data)
+  } catch {
+    return { ok: false, error: t('err.llmConfigInvalid') }
+  }
+
+  setSettings([
+    [LLM_SETTING_KEYS.provider, updated.provider],
+    [LLM_SETTING_KEYS.baseUrl, updated.baseUrl],
+    [LLM_SETTING_KEYS.model, updated.model],
+    [LLM_SETTING_KEYS.apiKey, updated.apiKey],
+    [LLM_SETTING_KEYS.enabled, updated.enabled ? '1' : '0'],
+    [
+      LLM_SETTING_KEYS.allowPrivateNetwork,
+      updated.allowPrivateNetwork ? '1' : '0',
+    ],
+  ])
+  revalidatePath('/admin')
+  return { ok: true, config: toPublicLlmConfig(updated) }
+}
+
+const llmDiscoverySchema = llmSettingsSchema.pick({
+  provider: true,
+  baseUrl: true,
+  apiKey: true,
+  allowPrivateNetwork: true,
+})
+
+export async function discoverLlmModels(input: {
+  provider: LlmConfigInput['provider']
+  baseUrl: string
+  apiKey: string
+  allowPrivateNetwork: boolean
+}): Promise<
+  { ok: true; models: string[] } | { ok: false; error: string }
+> {
+  const t = await getT()
+  const r = await requireAdminUser()
+  if (!r.ok) return r
+  const parsed = llmDiscoverySchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: t('err.llmConfigInvalid') }
+
+  try {
+    const requestConfig = resolveLlmRequestConfig(
+      getStoredLlmConfig(),
+      parsed.data,
+    )
+    const models = await fetchLlmModels(requestConfig)
+    return { ok: true, models }
+  } catch (error) {
+    return { ok: false, error: t(llmDiscoveryErrorKey(error)) }
+  }
 }
 
 const scheduleSchema = z.object({

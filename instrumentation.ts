@@ -33,4 +33,13 @@ export async function register() {
   } catch (e) {
     console.error('[scheduler] 启动失败（不影响点菜等功能，可在家庭管理里手动执行）', e)
   }
+
+  try {
+    const { startTemporaryImportImageCleanup } = await import(
+      '@/lib/recipe/import-image'
+    )
+    startTemporaryImportImageCleanup()
+  } catch (e) {
+    console.error('[recipe] 临时导入图片清理任务启动失败', e)
+  }
 }

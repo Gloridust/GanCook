@@ -32,7 +32,6 @@ export function UpdatePanel({
   // 进入页面自动查一次
   useEffect(() => {
     doCheck()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const doUpdate = () =>

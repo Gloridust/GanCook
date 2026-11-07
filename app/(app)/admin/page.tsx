@@ -13,6 +13,8 @@ import { RunSchedule } from '@/components/admin/run-schedule'
 import { UpdatePanel } from '@/components/admin/update-panel'
 import { APP_VERSION, IMAGE_REPO } from '@/lib/version'
 import { updateCapability } from '@/lib/update'
+import { getPublicLlmConfig } from '@/lib/llm/settings'
+import { LlmSettings } from '@/components/admin/llm-settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +22,7 @@ export default async function AdminPage() {
   const me = await requireAdmin()
   const t = await getT()
   const s = getSettings()
+  const llmConfig = getPublicLlmConfig()
   const capability = await updateCapability()
   const schedules = db
     .select()
@@ -52,6 +55,14 @@ export default async function AdminPage() {
           registrationOpen={s.registrationOpen}
           joinCode={s.joinCode}
         />
+      </section>
+
+      <section className="mb-7">
+        <h2 className="mb-1 text-base font-semibold text-ink">
+          {t('admin.llm')}
+        </h2>
+        <p className="mb-3 text-sm text-secondary">{t('admin.llmDesc')}</p>
+        <LlmSettings config={llmConfig} />
       </section>
 
       <section className="mb-7">
