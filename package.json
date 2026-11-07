@@ -1,6 +1,6 @@
 {
   "name": "gancook",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "private": true,
   "description": "干饭厨子 GanCook — 可自部署到 NAS 的家庭点菜系统",
   "scripts": {
