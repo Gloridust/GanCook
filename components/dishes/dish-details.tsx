@@ -1,7 +1,5 @@
 'use client'
 
-import Image from 'next/image'
-import { Soup } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -9,42 +7,46 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { useT } from '@/components/i18n-provider'
+import { DishThumb } from '@/components/dishes/dish-thumb'
 import type { Dish } from '@/lib/db/schema'
 
+type DetailDish = Pick<
+  Dish,
+  'name' | 'description' | 'instructions' | 'imagePath' | 'tags'
+>
+
+/** 菜品详情（只读）：简介、做法。可作触发器包裹，也可受控（open/onOpenChange） */
 export function DishDetails({
   dish,
   children,
+  open,
+  onOpenChange,
+  footer,
 }: {
-  dish: Dish
-  children: React.ReactNode
+  dish: DetailDish
+  children?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  /** 底部附加操作（如点菜页的「点这道」） */
+  footer?: React.ReactNode
 }) {
   const t = useT()
   return (
-    <Dialog>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent
         title={dish.name}
         className="max-h-[90dvh] overflow-y-auto"
       >
         <div className="space-y-4">
-          <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
-            {dish.imagePath ? (
-              <Image
-                src={`/api/uploads/${dish.imagePath}`}
-                alt={dish.name}
-                fill
-                sizes="(max-width: 480px) 100vw, 448px"
-                className="object-cover"
-              />
-            ) : (
-              <div className="mf-img-empty flex h-full items-center justify-center">
-                <Soup
-                  className="h-12 w-12 text-accent/35"
-                  strokeWidth={1.5}
-                />
-              </div>
-            )}
-          </div>
+          <DishThumb
+            name={dish.name}
+            imagePath={dish.imagePath}
+            tags={dish.tags}
+            sizes="(max-width: 480px) 100vw, 448px"
+            className={dish.imagePath ? 'aspect-[4/3] rounded-2xl' : 'h-28 rounded-2xl'}
+            emojiClassName="text-[52px]"
+          />
 
           {dish.tags && dish.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -65,7 +67,7 @@ export function DishDetails({
             </div>
           )}
 
-          {dish.instructions && (
+          {dish.instructions ? (
             <div>
               <h3 className="mb-1 text-sm font-semibold text-ink">
                 {t('dishform.instructions')}
@@ -74,7 +76,13 @@ export function DishDetails({
                 {dish.instructions}
               </p>
             </div>
+          ) : (
+            !dish.description && (
+              <p className="text-sm text-secondary">{t('dishdetail.empty')}</p>
+            )
           )}
+
+          {footer}
         </div>
       </DialogContent>
     </Dialog>

@@ -2,9 +2,7 @@ import { Plus, UtensilsCrossed, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { requireUser, listMembers } from '@/lib/auth/user'
 import { getSettings } from '@/lib/settings'
-import { listMeals } from '@/lib/meals'
-import { db } from '@/lib/db/client'
-import { orders } from '@/lib/db/schema'
+import { listMealsBetween, mealSummaries } from '@/lib/meals'
 import { dayjs, todayLocal } from '@/lib/time'
 import { getT } from '@/lib/i18n/server'
 import { Button } from '@/components/ui/button'
@@ -24,7 +22,7 @@ export default async function HomePage() {
 
   // 临近的饭局：最近 3 天（含今天）的未完成饭局 + 今天已完成的饭局
   const in3days = dayjs(today).add(2, 'day').format('YYYY-MM-DD')
-  const meals = listMeals()
+  const meals = listMealsBetween(today, in3days)
   const upcomingMeals = meals
     .filter((m) => {
       if (m.status === 'cancelled') return false
@@ -43,15 +41,10 @@ export default async function HomePage() {
         a.diningTime - b.diningTime,
     )
 
-  const orderRows = db
-    .select({ mealId: orders.mealId, userId: orders.userId })
-    .from(orders)
-    .all()
-  const participants = new Map<string, Set<string>>()
-  for (const r of orderRows) {
-    if (!participants.has(r.mealId)) participants.set(r.mealId, new Set())
-    participants.get(r.mealId)!.add(r.userId)
-  }
+  const summaries = mealSummaries(
+    upcomingMeals.map((m) => m.id),
+    me.id,
+  )
   const members = new Map(listMembers().map((m) => [m.id, m.name]))
 
   return (
@@ -99,7 +92,7 @@ export default async function HomePage() {
               meal={m}
               tz={tz}
               cookName={m.cookId ? members.get(m.cookId) : null}
-              participants={participants.get(m.id)?.size ?? 0}
+              summary={summaries.get(m.id)}
             />
           ))}
         </div>

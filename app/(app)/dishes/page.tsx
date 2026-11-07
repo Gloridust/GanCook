@@ -4,12 +4,13 @@ import { db } from '@/lib/db/client'
 import { dishes as dishesTable } from '@/lib/db/schema'
 import { requireUser } from '@/lib/auth/user'
 import { getT } from '@/lib/i18n/server'
+import { tagStats } from '@/lib/dish-categories'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
-import { DishCard } from '@/components/dishes/dish-card'
 import { DishForm } from '@/components/dishes/dish-form'
-import { DishDetails } from '@/components/dishes/dish-details'
+import { DishLibrary } from '@/components/dishes/dish-library'
+import { MenuTransfer } from '@/components/dishes/menu-transfer'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,33 +23,34 @@ export default async function DishesPage() {
     .orderBy(desc(dishesTable.createdAt))
     .all()
 
-  const active = all.filter((d) => d.status === 'active')
-  const archived = all.filter((d) => d.status === 'archived')
-  const canManage = (createdBy: string | null) =>
-    createdBy === me.id || me.isAdmin
+  const activeCount = all.filter((d) => d.status === 'active').length
+  const suggestedTags = tagStats(all).map((x) => x.tag)
 
   return (
     <>
       <PageHeader
         title={t('dishes.title')}
-        subtitle={t('dishes.count', { n: active.length })}
+        subtitle={t('dishes.count', { n: activeCount })}
         action={
-          <DishForm mode="create">
-            <Button size="sm">
-              <Plus className="h-4 w-4" />
-              {t('common.add')}
-            </Button>
-          </DishForm>
+          <div className="flex items-center gap-2">
+            <MenuTransfer dishCount={all.length} />
+            <DishForm mode="create" suggestedTags={suggestedTags}>
+              <Button size="sm">
+                <Plus className="h-4 w-4" />
+                {t('common.add')}
+              </Button>
+            </DishForm>
+          </div>
         }
       />
 
-      {active.length === 0 && archived.length === 0 ? (
+      {all.length === 0 ? (
         <EmptyState
           icon={<ChefHat />}
           title={t('dishes.emptyTitle')}
           description={t('dishes.emptyDesc')}
           action={
-            <DishForm mode="create">
+            <DishForm mode="create" suggestedTags={suggestedTags}>
               <Button>
                 <Plus className="h-4 w-4" />
                 {t('dishes.addFirst')}
@@ -57,42 +59,7 @@ export default async function DishesPage() {
           }
         />
       ) : (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            {active.map((dish) =>
-              canManage(dish.createdBy) ? (
-                <DishForm key={dish.id} mode="edit" dish={dish}>
-                  <DishCard dish={dish} />
-                </DishForm>
-              ) : (
-                <DishDetails key={dish.id} dish={dish}>
-                  <DishCard dish={dish} />
-                </DishDetails>
-              ),
-            )}
-          </div>
-
-          {archived.length > 0 && (
-            <>
-              <p className="mb-3 mt-7 text-sm font-medium text-secondary">
-                {t('dishes.archived')}
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                {archived.map((dish) =>
-                  canManage(dish.createdBy) ? (
-                    <DishForm key={dish.id} mode="edit" dish={dish}>
-                      <DishCard dish={dish} dimmed />
-                    </DishForm>
-                  ) : (
-                    <DishDetails key={dish.id} dish={dish}>
-                      <DishCard dish={dish} dimmed />
-                    </DishDetails>
-                  ),
-                )}
-              </div>
-            </>
-          )}
-        </>
+        <DishLibrary dishes={all} meId={me.id} isAdmin={me.isAdmin} />
       )}
     </>
   )

@@ -86,7 +86,7 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // 排除静态资源
-    '/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt)).*)',
+    // 排除静态资源；菜单导入（大文件上传）自行鉴权，避免 proxy 把请求体截断在 10MB
+    '/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|api/dishes/import|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt)).*)',
   ],
 }

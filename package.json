@@ -25,6 +25,7 @@
     "clsx": "^2.1.1",
     "dayjs": "^1.11.13",
     "drizzle-orm": "^0.38.4",
+    "fflate": "^0.8.2",
     "framer-motion": "^12.0.0",
     "jose": "^5.9.6",
     "lucide-react": "^0.469.0",

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db/client'
-import { dishes } from '@/lib/db/schema'
+import { dishes, orders } from '@/lib/db/schema'
 import { getCurrentUser } from '@/lib/auth/user'
 import { saveImage, deleteImage, fileToBuffer } from '@/lib/images'
 import { getT, type TFn } from '@/lib/i18n/server'
@@ -162,8 +162,20 @@ export async function deleteDish(id: string): Promise<ActionResult> {
   if (!dish) return { ok: true }
   if (dish.createdBy !== me.id && !me.isAdmin)
     return { ok: false, error: t('err.onlyOwnerDishDel') }
-  await deleteImage(dish.imagePath)
+  // 点过的菜不真删：orders 外键级联会抹掉历史饭局与贡献墙记录，改为下架保留
+  const used = db
+    .select({ id: orders.id })
+    .from(orders)
+    .where(eq(orders.dishId, id))
+    .limit(1)
+    .get()
+  if (used) {
+    db.update(dishes).set({ status: 'archived' }).where(eq(dishes.id, id)).run()
+    revalidatePath('/dishes')
+    return { ok: true }
+  }
   db.delete(dishes).where(eq(dishes.id, id)).run()
+  await deleteImage(dish.imagePath)
   revalidatePath('/dishes')
   return { ok: true }
 }

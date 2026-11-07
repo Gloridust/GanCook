@@ -188,12 +188,23 @@ body {
   padding: 0.85rem 1rem;
   text-align: left;
 }
-/* 行间发丝分隔线，从图标右侧起（iOS inset） */
+/* 行间发丝分隔线，从图标右侧起（iOS inset）。用伪元素画 1px 线：
+   负 spread 的 inset box-shadow 在行高 < 2×spread 时会退化成整块涂色 */
 .mf-row + .mf-row {
-  box-shadow: inset 0 1px 0 rgba(var(--mf-shadow) / 0.1);
+  position: relative;
 }
-.mf-row + .mf-row.mf-row-inset {
-  box-shadow: inset 56px 1px 0 -55px rgba(var(--mf-shadow) / 0.1);
+.mf-row + .mf-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: var(--mf-sep-inset, 0px);
+  height: 1px;
+  background: rgba(var(--mf-shadow) / 0.1);
+  pointer-events: none;
+}
+.mf-row-inset {
+  --mf-sep-inset: 3.9rem; /* 1rem 内边距 + 34px 图标 + 0.8rem 间距 */
 }
 .mf-row-press {
   transition: background-color 0.15s ease;
@@ -244,4 +255,75 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* ── 菜品无图占位：按名字散列的柔和色块 + 分类 emoji ── */
+.mf-dish-tile {
+  background:
+    radial-gradient(
+      ellipse at 50% 35%,
+      hsl(var(--tile-h, 140) 60% 92% / 0.9) 0%,
+      transparent 75%
+    ),
+    hsl(var(--tile-h, 140) 30% 95%);
+}
+@media (prefers-color-scheme: dark) {
+  .mf-dish-tile {
+    background:
+      radial-gradient(
+        ellipse at 50% 35%,
+        hsl(var(--tile-h, 140) 30% 26% / 0.9) 0%,
+        transparent 75%
+      ),
+      hsl(var(--tile-h, 140) 14% 18%);
+  }
+}
+
+/* 横向滑动的芯片栏：隐藏滚动条、两端留白可滑出屏幕 */
+.mf-rail {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-inline: 1rem;
+}
+.mf-rail::-webkit-scrollbar {
+  display: none;
+}
+
+/* 筛选芯片 */
+.mf-filter-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 2rem;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--mf-surface);
+  color: var(--mf-secondary);
+  border: 1px solid rgba(var(--mf-shadow) / 0.12);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+.mf-filter-chip[aria-pressed='true'] {
+  background: var(--mf-accent-strong);
+  border-color: transparent;
+  color: #fff;
+}
+.mf-filter-chip .mf-count {
+  font-size: 0.6875rem;
+  opacity: 0.7;
+}
+
+/* 菜品行（44–48px 缩略图）：分隔线从缩略图右侧起 */
+.mf-row-dish {
+  --mf-sep-inset: 4.8rem;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
 }

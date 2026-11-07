@@ -114,6 +114,8 @@ export const orders = sqliteTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    // 份数（如「包子 ×5」）；同一人同一道菜只占一行，靠份数累加
+    quantity: integer('quantity').notNull().default(1),
     note: text('note'),
     createdAt: integer('created_at').notNull().default(now),
   },
