@@ -165,6 +165,9 @@ export function DishForm({
               ? t('dishform.importedImageWarning')
               : t('dishform.imported'),
         )
+      } catch {
+        // 网络中断 / 反代超时（504）等：给出可读提示而不是抛到错误边界
+        if (openRef.current) setError(t('err.recipeFetchFailed'))
       } finally {
         stopImportProgress()
       }

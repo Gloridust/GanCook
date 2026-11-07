@@ -1,4 +1,11 @@
 import { extractXiaohongshuRecipeFromHtml } from './xiaohongshu'
+import {
+  capHtml,
+  codePointOrEntity,
+  findElements,
+  firstElementInner,
+  stripNonVisibleBlocks,
+} from './html-scan'
 
 export type RecipeDraft = {
   name: string
@@ -29,7 +36,7 @@ function decodeHtml(value: string): string {
       if (code[0] === '#') {
         const hex = code[1]?.toLowerCase() === 'x'
         const value = Number.parseInt(code.slice(hex ? 2 : 1), hex ? 16 : 10)
-        return Number.isFinite(value) ? String.fromCodePoint(value) : entity
+        return codePointOrEntity(value, entity)
       }
       return named[code.toLowerCase()] ?? entity
     },
@@ -242,7 +249,8 @@ function parseAttributes(tag: string): Record<string, string> {
 
 function metadata(html: string): Map<string, string> {
   const result = new Map<string, string>()
-  for (const match of html.matchAll(/<meta\b[^>]*>/gi)) {
+  // [^<>]：遇到下一个 < 即失败，保证线性时间（[^>]* 在未闭合的 <meta 上是 O(n²)）
+  for (const match of html.matchAll(/<meta\b[^<>]*>/gi)) {
     const attrs = parseAttributes(match[0])
     const key = (attrs.property || attrs.name || attrs.itemprop || '').toLowerCase()
     if (key && attrs.content && !result.has(key)) {
@@ -273,14 +281,16 @@ function cleanTitle(value: string): string {
 }
 
 export function extractRecipeFromHtml(
-  html: string,
+  rawHtml: string,
   pageUrl: string,
 ): RecipeDraft {
-  for (const match of html.matchAll(
-    /<script\b[^>]*type\s*=\s*(?:"application\/ld\+json"|'application\/ld\+json'|application\/ld\+json)[^>]*>([\s\S]*?)<\/script>/gi,
-  )) {
+  const html = capHtml(rawHtml)
+  const jsonLdScripts = findElements(html, 'script').filter((el) =>
+    /type\s*=\s*["']?application\/ld\+json/i.test(el.openTag),
+  )
+  for (const script of jsonLdScripts) {
     try {
-      const parsed = parseRecipeJsonLd(JSON.parse(match[1].trim()))
+      const parsed = parseRecipeJsonLd(JSON.parse(script.inner.trim()))
       if (parsed && (parsed.name || parsed.instructions)) {
         return {
           ...parsed,
@@ -296,12 +306,12 @@ export function extractRecipeFromHtml(
   if (xiaohongshu) return xiaohongshu
 
   const meta = metadata(html)
-  const titleMatch = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)
+  const titleText = firstElementInner(html, 'title')
   const name = cleanTitle(
     meta.get('og:title') ||
       meta.get('twitter:title') ||
       meta.get('name') ||
-      titleMatch?.[1] ||
+      titleText ||
       '',
   )
   const description = cleanText(
@@ -328,12 +338,10 @@ export function extractRecipeFromHtml(
 
 export function htmlToVisibleText(html: string, max = 20_000): string {
   return cleanText(
-    html
-      .replace(/<!--[\s\S]*?-->/g, ' ')
-      .replace(/<(script|style|noscript|svg)\b[\s\S]*?<\/\1>/gi, ' ')
+    stripNonVisibleBlocks(capHtml(html))
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<\/(?:p|div|li|h[1-6]|section|article)>/gi, '\n')
-      .replace(/<[^>]+>/g, ' '),
+      .replace(/<[^<>]+>/g, ' '),
     max,
   )
 }

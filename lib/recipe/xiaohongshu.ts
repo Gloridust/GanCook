@@ -1,4 +1,10 @@
 import type { RecipeDraft } from './parse'
+import {
+  capHtml,
+  codePointOrEntity,
+  findElements,
+  firstElementInner,
+} from './html-scan'
 
 type JsonObject = Record<string, unknown>
 
@@ -21,9 +27,7 @@ function decodeHtml(value: string): string {
       if (code[0] === '#') {
         const hex = code[1]?.toLowerCase() === 'x'
         const parsed = Number.parseInt(code.slice(hex ? 2 : 1), hex ? 16 : 10)
-        return Number.isFinite(parsed)
-          ? String.fromCodePoint(parsed)
-          : entity
+        return codePointOrEntity(parsed, entity)
       }
       return named[code.toLowerCase()] ?? entity
     },
@@ -60,7 +64,7 @@ function parseAttributes(tag: string): Record<string, string> {
 
 function metadata(html: string): Map<string, string> {
   const result = new Map<string, string>()
-  for (const match of html.matchAll(/<meta\b[^>]*>/gi)) {
+  for (const match of html.matchAll(/<meta\b[^<>]*>/gi)) {
     const attrs = parseAttributes(match[0])
     const key = (attrs.property || attrs.name || '').toLowerCase()
     if (key && attrs.content && !result.has(key)) {
@@ -288,16 +292,17 @@ function isXiaohongshuUrl(pageUrl: string): boolean {
 }
 
 export function extractXiaohongshuRecipeFromHtml(
-  html: string,
+  rawHtml: string,
   pageUrl: string,
 ): RecipeDraft | null {
   if (!isXiaohongshuUrl(pageUrl)) return null
+  const html = capHtml(rawHtml)
 
   let note:
     | { title: string; body: string; imageUrl: string | null }
     | null = null
-  for (const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) {
-    const state = parseInitialState(match[1])
+  for (const script of findElements(html, 'script')) {
+    const state = parseInitialState(script.inner)
     const candidate = noteCandidate(state)
     if (
       candidate &&
@@ -310,13 +315,13 @@ export function extractXiaohongshuRecipeFromHtml(
   }
 
   const meta = metadata(html)
-  const titleMatch = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)
+  const titleText = firstElementInner(html, 'title')
   const title =
     note?.title ||
     cleanTitle(
       meta.get('og:title') ||
         meta.get('twitter:title') ||
-        titleMatch?.[1] ||
+        titleText ||
         '',
     )
   const body =

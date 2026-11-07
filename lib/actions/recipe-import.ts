@@ -116,11 +116,13 @@ export async function importRecipeFromUrl(input: {
       return { ok: false, error: t('err.recipeFetchFailed') }
     }
 
-    const parsed = parseFetchedRecipe(
-      page.body,
-      page.contentType,
-      page.finalUrl,
-    )
+    let parsed: ReturnType<typeof parseFetchedRecipe>
+    try {
+      parsed = parseFetchedRecipe(page.body, page.contentType, page.finalUrl)
+    } catch (error) {
+      logRecipeImportFailure('page_parse', url, error)
+      return { ok: false, error: t('err.recipeParseFailed') }
+    }
     const llmConfig = getStoredLlmConfig()
     const organized = await organizeRecipeDraftWithLlm(
       parsed.draft,

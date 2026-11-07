@@ -109,13 +109,13 @@ test('recipe import progress advances honestly by elapsed time and remains activ
   assert.equal(importProgressPhaseAt(0), 'cleaning')
   assert.equal(importProgressPhaseAt(1_500), 'fetching')
   assert.equal(importProgressPhaseAt(12_000), 'extracting')
-  assert.equal(importProgressPhaseAt(60_000), 'extracting')
-  assert.equal(importProgressPhaseAt(72_000), 'image')
-  assert.equal(importProgressPhaseAt(75_000), 'image')
+  assert.equal(importProgressPhaseAt(45_000), 'extracting')
+  assert.equal(importProgressPhaseAt(52_000), 'image')
+  assert.equal(importProgressPhaseAt(60_000), 'image')
 })
 
-test('recipe LLM timeout allows up to sixty seconds', () => {
-  assert.equal(RECIPE_LLM_TIMEOUT_MS, 60_000)
+test('recipe LLM timeout stays within common reverse-proxy timeouts', () => {
+  assert.equal(RECIPE_LLM_TIMEOUT_MS, 40_000)
 })
 
 test('recipe import progress has localized, in-progress wording in both locales', () => {

@@ -1,4 +1,8 @@
-export type RecipeImportStage = 'page_fetch' | 'llm_extract' | 'image_fetch'
+export type RecipeImportStage =
+  | 'page_fetch'
+  | 'page_parse'
+  | 'llm_extract'
+  | 'image_fetch'
 
 function errorCode(error: unknown): string {
   const value =

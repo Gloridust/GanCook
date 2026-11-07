@@ -12,6 +12,6 @@ export function importProgressPhaseAt(
 ): ImportProgressPhase {
   if (elapsedMs < 1_500) return 'cleaning'
   if (elapsedMs < 8_000) return 'fetching'
-  if (elapsedMs < 72_000) return 'extracting'
+  if (elapsedMs < 52_000) return 'extracting'
   return 'image'
 }
