@@ -406,7 +406,7 @@ const zh: Messages = {
   "notify.type.dingtalk": "钉钉群",
   "notify.type.bark": "Bark",
   "notify.type.webhook": "通用 Webhook",
-  "notify.hint.wecom": "企业微信群 → 群设置 → 添加群机器人，复制 Webhook 地址。微信互通群里也能收到。",
+  "notify.hint.wecom": "企业微信群 → 群设置 → 添加群机器人，复制 Webhook 地址。家人需在企业微信里加入该群才能收到。",
   "notify.hint.feishu": "飞书群 → 设置 → 群机器人 → 自定义机器人，复制 Webhook 地址（不要开签名校验）。",
   "notify.hint.dingtalk": "钉钉群 → 智能群助手 → 自定义机器人；安全设置选「自定义关键词」并填「干饭」。",
   "notify.hint.bark": "iPhone 装 Bark，复制形如 https://api.day.app/xxxx 的地址（自建服务同理）。",

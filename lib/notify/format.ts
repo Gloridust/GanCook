@@ -122,7 +122,7 @@ export function buildRequest(
   let body: unknown
   switch (type) {
     case 'wecom':
-      // 企业微信群机器人：text 在微信互通群里也能正常显示（markdown 不行）
+      // 企业微信群机器人：用 text 而非 markdown，各客户端都能正常显示
       body = { msgtype: 'text', text: { content: full } }
       break
     case 'dingtalk':
