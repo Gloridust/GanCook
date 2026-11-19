@@ -15,6 +15,8 @@ export type OrderDetail = {
   dishName: string
   dishImage: string | null
   dishTags: string[] | null
+  dishDescription: string | null
+  dishInstructions: string | null
 }
 
 export type ReviewDetail = {
@@ -65,6 +67,8 @@ export function getMealDetail(id: string): MealDetail | null {
       dishName: dishes.name,
       dishImage: dishes.imagePath,
       dishTags: dishes.tags,
+      dishDescription: dishes.description,
+      dishInstructions: dishes.instructions,
     })
     .from(orders)
     .innerJoin(users, eq(orders.userId, users.id))

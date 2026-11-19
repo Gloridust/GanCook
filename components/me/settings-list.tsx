@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Languages, KeyRound, Settings, LogOut } from 'lucide-react'
+import { Languages, KeyRound, Settings, LogOut, Refrigerator, Plug } from 'lucide-react'
 import { List, Row } from '@/components/ui/list'
 import { IconChip } from '@/components/ui/icon-chip'
 import { LanguageSwitch } from '@/components/language-switch'
@@ -30,11 +30,29 @@ export function SettingsList({ isAdmin }: { isAdmin: boolean }) {
         <Row
           leading={
             <IconChip>
+              <Refrigerator />
+            </IconChip>
+          }
+          title={t('pantry.title')}
+          href="/pantry"
+        />
+        <Row
+          leading={
+            <IconChip>
               <KeyRound />
             </IconChip>
           }
           title={t('me.changePassword')}
           onClick={() => setPwOpen(true)}
+        />
+        <Row
+          leading={
+            <IconChip>
+              <Plug />
+            </IconChip>
+          }
+          title={t('api.title')}
+          href="/me/api"
         />
         {isAdmin && (
           <Row

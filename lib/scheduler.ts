@@ -1,12 +1,16 @@
 import 'server-only'
-import { and, eq, lte, inArray } from 'drizzle-orm'
+import { and, eq, gt, lte, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db/client'
 import { meals, mealSchedules } from '@/lib/db/schema'
 import { getSettings } from '@/lib/settings'
+import { notifyMealInBackground } from '@/lib/notify/dispatch'
+import { getNotifyConfig } from '@/lib/notify/settings'
 import { dayjs, localDateTimeToSec, nowSec } from '@/lib/time'
 
 // 用餐时间过后多久自动标记「已完成」
 const DONE_AFTER_SEC = 4 * 3600
+// 刚开的饭局不发「快截止」提醒（开局通知刚发过）
+const REMIND_MIN_AGE_SEC = 10 * 60
 
 export type TickResult = {
   created: number
@@ -22,6 +26,7 @@ export function tick(): TickResult {
   const tz = getSettings().timezone
   const now = nowSec()
   let created = 0
+  const createdIds: string[] = []
 
   // 1) 按规则创建到点的饭局
   const schedules = db
@@ -52,7 +57,8 @@ export function tick(): TickResult {
         .get()
       if (exists) continue
 
-      db.insert(meals)
+      const row = db
+        .insert(meals)
         .values({
           title: s.name,
           mealType: s.mealType,
@@ -63,21 +69,44 @@ export function tick(): TickResult {
           isAuto: true,
           scheduleId: s.id,
         })
-        .run()
+        .returning({ id: meals.id })
+        .get()
+      createdIds.push(row.id)
       created++
     }
   }
 
-  // 2) 点菜截止 → 做饭中
-  const started = db
+  // 2) 快截止提醒（每顿只提醒一次）
+  const leadSec = getNotifyConfig().deadlineMinutes * 60
+  const remindIds = db
+    .update(meals)
+    .set({ deadlineReminded: true })
+    .where(
+      and(
+        eq(meals.status, 'ordering'),
+        eq(meals.deadlineReminded, false),
+        gt(meals.orderDeadline, now),
+        lte(meals.orderDeadline, now + leadSec),
+        lte(meals.createdAt, now - REMIND_MIN_AGE_SEC),
+      ),
+    )
+    .returning({ id: meals.id })
+    .all()
+    .map((r) => r.id)
+
+  // 3) 点菜截止 → 做饭中
+  const startedIds = db
     .update(meals)
     .set({ status: 'cooking' })
     .where(
       and(eq(meals.status, 'ordering'), lte(meals.orderDeadline, now)),
     )
-    .run().changes
+    .returning({ id: meals.id })
+    .all()
+    .map((r) => r.id)
+  const started = startedIds.length
 
-  // 3) 用餐结束 → 已完成（含错过截止仍在 ordering 的）
+  // 4) 用餐结束 → 已完成（含错过截止仍在 ordering 的）
   const finished = db
     .update(meals)
     .set({ status: 'done' })
@@ -88,6 +117,11 @@ export function tick(): TickResult {
       ),
     )
     .run().changes
+
+  // 推送放在最后、且不等待：网络慢不拖住调度
+  for (const id of createdIds) notifyMealInBackground('meal_created', id)
+  for (const id of remindIds) notifyMealInBackground('deadline_soon', id)
+  for (const id of startedIds) notifyMealInBackground('cooking', id)
 
   return { created, started, finished }
 }

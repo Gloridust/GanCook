@@ -22,6 +22,13 @@
       "when": 1794077509885,
       "tag": "0002_order_quantity",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1795109563705,
+      "tag": "0003_pantry_notify_api",
+      "breakpoints": true
     }
   ]
 }

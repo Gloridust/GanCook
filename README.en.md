@@ -32,7 +32,10 @@ all data lives on your own NAS.
 - 👆 **Tap-to-login** — on a shared device, pick your avatar and enter a 6-digit code; no typing.
 - ⏰ **Auto meals (like alarms)** — add as many rules as you like: meal, time, how early to open, how early to close, and which weekdays. Auto-opens, auto-advances, auto-completes.
 - 🔎 **Easy ordering with a big menu** — search, filter by tag (meat / veggie / soup…), list or grid view, and quantities ("5 buns").
-- 🎲 **Surprise me** — pick a mix like "1 meat, 1 veggie, 1 soup" and get a random menu; recently eaten dishes come up less.
+- 🎲 **Surprise me** — pick a mix like "1 meat, 1 veggie, 1 soup" and get a random menu; recently eaten dishes come up less. **Smart** mode also weighs the season and your pantry (expiring items first), and lets an LLM pick with reasons when configured.
+- 🧊 **Pantry** — track what's in the fridge, freezer and cupboard with best-before dates; expiring items show up on Home, and the cook sees which pantry items each ordered dish can use.
+- 🔔 **Notifications** — push to WeCom / Feishu / DingTalk groups, Bark or any webhook when a meal opens, before ordering closes, and when orders are in (with the menu).
+- 🔌 **Open API** — create a token and use the REST API to add dishes, open meals, order, update the pantry or get recommendations ([API docs](doc/API.md)).
 - 📦 **Menu import / export** — share your whole menu (with photos) as a zip, or import a zip of photos (file name = dish name) or a plain text list.
 - 🔗 **Recipe link import** — paste a recipe link to pre-fill name, steps and cover (optional LLM clean-up).
 - 🌱 **Contribution wall** — GitHub-style heatmaps for cooking & ordering.
