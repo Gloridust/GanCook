@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { RecipeDraft } from './parse'
+import { jsonObjectFrom } from '@/lib/llm/json'
 
 const MAX_LLM_INPUT = 20_000
 
@@ -54,17 +55,6 @@ export function buildRecipeUserPrompt(input: {
     input.visibleText.slice(0, MAX_LLM_INPUT),
     '</UNTRUSTED_WEBPAGE>',
   ].join('\n')
-}
-
-function jsonObjectFrom(raw: string): string {
-  const unfenced = raw
-    .trim()
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/, '')
-  const start = unfenced.indexOf('{')
-  const end = unfenced.lastIndexOf('}')
-  if (start < 0 || end <= start) throw new Error('LLM_INVALID_JSON')
-  return unfenced.slice(start, end + 1)
 }
 
 export function parseLlmRecipeOutput(raw: string): RecipeDraft {
