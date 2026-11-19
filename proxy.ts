@@ -7,7 +7,8 @@ const secret = new TextEncoder().encode(AUTH_SECRET)
 
 // 无需登录即可访问的页面（是否再跳转交给页面判断——页面能读数据库，能验证用户是否真实存在）
 const PUBLIC_PAGES = ['/login', '/setup']
-const PUBLIC_API = ['/api/uploads', '/api/cron']
+// /api/v1 是开放 API：不走会话 Cookie，由路由自己校验 API 令牌
+const PUBLIC_API = ['/api/uploads', '/api/cron', '/api/v1/']
 
 async function hasValidSession(req: NextRequest): Promise<boolean> {
   const token = req.cookies.get(COOKIE)?.value

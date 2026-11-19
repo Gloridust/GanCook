@@ -55,13 +55,16 @@ export function DishRow({
   dimmed,
   onClick,
   trailing,
+  subtitle,
 }: {
   dish: CardDish
   dimmed?: boolean
   onClick?: () => void
   trailing?: React.ReactNode
+  /** 覆盖默认副标题（默认：标签，或简介） */
+  subtitle?: string
 }) {
-  const sub = subline(dish)
+  const sub = subtitle ?? subline(dish)
   const body = (
     <>
       <DishThumb

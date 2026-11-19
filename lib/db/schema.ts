@@ -12,9 +12,15 @@ import {
   sqliteTable,
   text,
   integer,
+  real,
   unique,
   index,
 } from 'drizzle-orm/sqlite-core'
+import {
+  NOTIFY_CHANNEL_TYPES,
+  NOTIFY_EVENTS,
+  type NotifyEvent,
+} from '../notify/events'
 
 const now = sql`(unixepoch())`
 
@@ -89,6 +95,10 @@ export const meals = sqliteTable(
     createdBy: text('created_by').references(() => users.id, {
       onDelete: 'set null',
     }),
+    // 「快截止了」提醒是否已推送（避免每次心跳重复推送）
+    deadlineReminded: integer('deadline_reminded', { mode: 'boolean' })
+      .notNull()
+      .default(false),
     createdAt: integer('created_at').notNull().default(now),
   },
   (t) => [
@@ -180,6 +190,69 @@ export const settings = sqliteTable('settings', {
   value: text('value'),
 })
 
+// ── 家里库存（冰箱 / 冷冻 / 常温） ──
+export const pantryItems = sqliteTable(
+  'pantry_items',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    name: text('name').notNull(),
+    // 数量可空：「有，但说不清多少」（如一把葱）
+    quantity: real('quantity'),
+    unit: text('unit'),
+    location: text('location', { enum: ['fridge', 'freezer', 'pantry'] })
+      .notNull()
+      .default('fridge'),
+    // 保质期 YYYY-MM-DD（家庭时区），可空
+    expiresOn: text('expires_on'),
+    note: text('note'),
+    createdBy: text('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: integer('created_at').notNull().default(now),
+    updatedAt: integer('updated_at').notNull().default(now),
+  },
+  (t) => [index('idx_pantry_location').on(t.location)],
+)
+
+// ── 消息推送渠道（企业微信 / 飞书 / 钉钉 / Bark / 通用 Webhook） ──
+export const notifyChannels = sqliteTable('notify_channels', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text('name').notNull(),
+  type: text('type', { enum: NOTIFY_CHANNEL_TYPES }).notNull(),
+  url: text('url').notNull(),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  events: text('events', { mode: 'json' })
+    .$type<NotifyEvent[]>()
+    .notNull()
+    .default([...NOTIFY_EVENTS]),
+  createdAt: integer('created_at').notNull().default(now),
+})
+
+// ── 开放 API 令牌（以创建者身份调用 /api/v1） ──
+export const apiTokens = sqliteTable(
+  'api_tokens',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    // 只存 SHA-256，明文仅在创建时展示一次
+    tokenHash: text('token_hash').notNull().unique(),
+    // 明文前缀，便于在列表里辨认
+    prefix: text('prefix').notNull(),
+    lastUsedAt: integer('last_used_at'),
+    createdAt: integer('created_at').notNull().default(now),
+  },
+  (t) => [index('idx_api_tokens_user').on(t.userId)],
+)
+
 // 类型导出
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
@@ -193,3 +266,6 @@ export type Review = typeof reviews.$inferSelect
 export type NewReview = typeof reviews.$inferInsert
 export type MealSchedule = typeof mealSchedules.$inferSelect
 export type NewMealSchedule = typeof mealSchedules.$inferInsert
+export type PantryItem = typeof pantryItems.$inferSelect
+export type NotifyChannel = typeof notifyChannels.$inferSelect
+export type ApiToken = typeof apiTokens.$inferSelect

@@ -15,6 +15,9 @@ import { APP_VERSION, IMAGE_REPO } from '@/lib/version'
 import { updateCapability } from '@/lib/update'
 import { getPublicLlmConfig } from '@/lib/llm/settings'
 import { LlmSettings } from '@/components/admin/llm-settings'
+import { NotifySettings } from '@/components/admin/notify-settings'
+import { notifyChannels } from '@/lib/db/schema'
+import { getNotifyConfig } from '@/lib/notify/settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +27,12 @@ export default async function AdminPage() {
   const s = getSettings()
   const llmConfig = getPublicLlmConfig()
   const capability = await updateCapability()
+  const channels = db
+    .select()
+    .from(notifyChannels)
+    .all()
+    .sort((a, b) => a.createdAt - b.createdAt)
+  const notifyConfig = getNotifyConfig()
   const schedules = db
     .select()
     .from(mealSchedules)
@@ -76,6 +85,14 @@ export default async function AdminPage() {
         <div className="mt-3">
           <RunSchedule />
         </div>
+      </section>
+
+      <section className="mb-7">
+        <h2 className="mb-1 text-base font-semibold text-ink">
+          {t('notify.title')}
+        </h2>
+        <p className="mb-3 text-sm text-secondary">{t('notify.desc')}</p>
+        <NotifySettings channels={channels} config={notifyConfig} />
       </section>
 
       <section className="mb-7">

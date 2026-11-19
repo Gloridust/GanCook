@@ -1,58 +1,33 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { and, eq, inArray } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db/client'
-import { dishes, meals, orders } from '@/lib/db/schema'
+import { meals } from '@/lib/db/schema'
 import { getCurrentUser } from '@/lib/auth/user'
-import { getSettings } from '@/lib/settings'
 import { getMeal } from '@/lib/meals'
-import { localDateTimeToSec, nowSec } from '@/lib/time'
 import { getT } from '@/lib/i18n/server'
+import { notifyMealInBackground } from '@/lib/notify/dispatch'
+import {
+  addOrdersFor,
+  createMealFor,
+  setOrderQuantityFor,
+  type CreateMealInput,
+} from '@/lib/services/meals'
 
 export type ActionResult =
   | { ok: true; id?: string }
   | { ok: false; error: string }
 
-const reDate = /^\d{4}-\d{2}-\d{2}$/
-const reTime = /^\d{2}:\d{2}$/
-
-export async function createMeal(input: {
-  mealType: 'breakfast' | 'lunch' | 'dinner'
-  date: string
-  diningTime: string
-  deadline: string
-  title?: string
-}): Promise<ActionResult> {
+export async function createMeal(input: CreateMealInput): Promise<ActionResult> {
   const t = await getT()
   const me = await getCurrentUser()
   if (!me) return { ok: false, error: t('err.loginRequired') }
-
-  if (!reDate.test(input.date)) return { ok: false, error: t('err.dateFmt') }
-  if (!reTime.test(input.diningTime) || !reTime.test(input.deadline))
-    return { ok: false, error: t('err.timeFmt') }
-
-  const tz = getSettings().timezone
-  const diningSec = localDateTimeToSec(input.date, input.diningTime, tz)
-  const deadlineSec = localDateTimeToSec(input.date, input.deadline, tz)
-
-  const row = db
-    .insert(meals)
-    .values({
-      title: input.title?.trim().slice(0, 30) || null,
-      mealType: input.mealType,
-      date: input.date,
-      diningTime: diningSec,
-      orderDeadline: deadlineSec,
-      status: 'ordering',
-      isAuto: false,
-      createdBy: me.id,
-    })
-    .returning()
-    .get()
+  const res = createMealFor(me, input)
+  if (!res.ok) return { ok: false, error: t(`err.${res.code}`) }
   revalidatePath('/meals')
   revalidatePath('/home')
-  return { ok: true, id: row.id }
+  return { ok: true, id: res.value.id }
 }
 
 export async function deleteMeal(id: string): Promise<ActionResult> {
@@ -96,19 +71,12 @@ export async function setMealStatus(
   const allowed = me.isAdmin || meal.createdBy === me.id || meal.cookId === me.id
   if (!allowed) return { ok: false, error: t('err.cookOrAdmin') }
   db.update(meals).set({ status }).where(eq(meals.id, id)).run()
+  if (status === 'cooking' && meal.status === 'ordering')
+    notifyMealInBackground('cooking', id)
   revalidatePath(`/meals/${id}`)
   revalidatePath('/meals')
   revalidatePath('/home')
   return { ok: true }
-}
-
-const MAX_QTY = 99
-
-function orderingGuard(mealId: string): 'notFound' | 'closed' | null {
-  const meal = getMeal(mealId)
-  if (!meal) return 'notFound'
-  if (meal.status !== 'ordering' || nowSec() >= meal.orderDeadline) return 'closed'
-  return null
 }
 
 function revalidateMeal(mealId: string) {
@@ -129,34 +97,8 @@ export async function setOrderQuantity(
   const t = await getT()
   const me = await getCurrentUser()
   if (!me) return { ok: false, error: t('err.loginRequired') }
-  const guard = orderingGuard(mealId)
-  if (guard === 'notFound') return { ok: false, error: t('err.mealNotFound') }
-  if (guard === 'closed') return { ok: false, error: t('err.orderClosed') }
-
-  const qty = Math.max(0, Math.min(MAX_QTY, Math.floor(Number(quantity) || 0)))
-  const mine = and(
-    eq(orders.mealId, mealId),
-    eq(orders.dishId, dishId),
-    eq(orders.userId, me.id),
-  )
-
-  if (qty === 0) {
-    db.delete(orders).where(mine).run()
-  } else {
-    const dish = db
-      .select({ id: dishes.id })
-      .from(dishes)
-      .where(and(eq(dishes.id, dishId), eq(dishes.status, 'active')))
-      .get()
-    if (!dish) return { ok: false, error: t('err.dishNotFound') }
-    db.insert(orders)
-      .values({ mealId, dishId, userId: me.id, quantity: qty })
-      .onConflictDoUpdate({
-        target: [orders.mealId, orders.dishId, orders.userId],
-        set: { quantity: qty },
-      })
-      .run()
-  }
+  const res = setOrderQuantityFor(me, mealId, dishId, quantity)
+  if (!res.ok) return { ok: false, error: t(`err.${res.code}`) }
   revalidateMeal(mealId)
   return { ok: true }
 }
@@ -169,25 +111,8 @@ export async function addOrders(
   const t = await getT()
   const me = await getCurrentUser()
   if (!me) return { ok: false, error: t('err.loginRequired') }
-  const guard = orderingGuard(mealId)
-  if (guard === 'notFound') return { ok: false, error: t('err.mealNotFound') }
-  if (guard === 'closed') return { ok: false, error: t('err.orderClosed') }
-
-  const ids = [...new Set(dishIds)].slice(0, 20)
-  if (ids.length === 0) return { ok: true }
-  const valid = db
-    .select({ id: dishes.id })
-    .from(dishes)
-    .where(and(inArray(dishes.id, ids), eq(dishes.status, 'active')))
-    .all()
-  db.transaction((tx) => {
-    for (const d of valid) {
-      tx.insert(orders)
-        .values({ mealId, dishId: d.id, userId: me.id, quantity: 1 })
-        .onConflictDoNothing()
-        .run()
-    }
-  })
+  const res = addOrdersFor(me, mealId, dishIds)
+  if (!res.ok) return { ok: false, error: t(`err.${res.code}`) }
   revalidateMeal(mealId)
   return { ok: true }
 }

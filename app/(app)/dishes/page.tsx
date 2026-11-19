@@ -1,4 +1,5 @@
-import { Plus, ChefHat } from 'lucide-react'
+import Link from 'next/link'
+import { Plus, ChefHat, Refrigerator } from 'lucide-react'
 import { desc } from 'drizzle-orm'
 import { db } from '@/lib/db/client'
 import { dishes as dishesTable } from '@/lib/db/schema'
@@ -33,6 +34,14 @@ export default async function DishesPage() {
         subtitle={t('dishes.count', { n: activeCount })}
         action={
           <div className="flex items-center gap-2">
+            <Link
+              href="/pantry"
+              aria-label={t('pantry.title')}
+              title={t('pantry.title')}
+              className="mf-outline flex h-9 w-9 items-center justify-center rounded-full text-secondary"
+            >
+              <Refrigerator className="h-[18px] w-[18px]" />
+            </Link>
             <MenuTransfer dishCount={all.length} />
             <DishForm mode="create" suggestedTags={suggestedTags}>
               <Button size="sm">

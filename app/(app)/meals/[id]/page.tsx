@@ -11,12 +11,15 @@ import { MEAL_EMOJI, fmtTime, fmtDateLabel, deadlineText, nowSec } from '@/lib/t
 import { getT } from '@/lib/i18n/server'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { List, Row } from '@/components/ui/list'
 import { STATUS_META } from '@/components/meals/meal-card'
 import { CookButton, MealManage, StatusAction } from '@/components/meals/meal-controls'
 import { OrderPicker } from '@/components/meals/order-picker'
 import { ReviewSection } from '@/components/meals/review-section'
-import { DishThumb } from '@/components/dishes/dish-thumb'
+import { OrderedDishes } from '@/components/meals/ordered-dishes'
+import { listPantry } from '@/lib/services/pantry'
+import { pantryMatches } from '@/lib/recommend/rules'
+import { fmtQuantity } from '@/lib/pantry'
+import { todayLocal } from '@/lib/time'
 
 export const dynamic = 'force-dynamic'
 
@@ -78,6 +81,8 @@ export default async function MealDetailPage({
     name: string
     image: string | null
     tags: string[] | null
+    description: string | null
+    instructions: string | null
     total: number
     people: { id: string; name: string; qty: number }[]
   }
@@ -85,7 +90,16 @@ export default async function MealDetailPage({
   for (const o of orders) {
     let g = byDish.get(o.dishId)
     if (!g) {
-      g = { dishId: o.dishId, name: o.dishName, image: o.dishImage, tags: o.dishTags, total: 0, people: [] }
+      g = {
+        dishId: o.dishId,
+        name: o.dishName,
+        image: o.dishImage,
+        tags: o.dishTags,
+        description: o.dishDescription,
+        instructions: o.dishInstructions,
+        total: 0,
+        people: [],
+      }
       byDish.set(o.dishId, g)
     }
     g.total += o.quantity
@@ -95,6 +109,9 @@ export default async function MealDetailPage({
   const participantCount = new Set(orders.map((o) => o.userId)).size
   const servings = dishGroups.reduce((s, g) => s + g.total, 0)
   const myPickedCount = Object.keys(myQty).length
+
+  const pantry = dishGroups.length > 0 ? listPantry() : []
+  const today = todayLocal(tz)
 
   const status = STATUS_META[meal.status]
   const sep = t('common.listSep')
@@ -107,32 +124,26 @@ export default async function MealDetailPage({
         {orderingOpen ? t('detail.noOrdersOpen') : t('detail.noOrdersClosed')}
       </div>
     ) : (
-      <List>
-        {dishGroups.map((g) => (
-          <Row
-            key={g.dishId}
-            chevron={false}
-            className="mf-row-dish"
-            leading={
-              <DishThumb
-                name={g.name}
-                imagePath={g.image}
-                tags={g.tags}
-                sizes="44px"
-                className="h-11 w-11 shrink-0 rounded-xl"
-                emojiClassName="text-[22px]"
-              />
-            }
-            title={g.name}
-            subtitle={whoText(g)}
-            trailing={
-              <span className="rounded-full bg-tint px-2.5 py-1 text-sm font-semibold tabular-nums text-accent">
-                ×{g.total}
-              </span>
-            }
-          />
-        ))}
-      </List>
+      <OrderedDishes
+        groups={dishGroups.map((g) => ({
+          dishId: g.dishId,
+          name: g.name,
+          image: g.image,
+          tags: g.tags,
+          description: g.description,
+          instructions: g.instructions,
+          total: g.total,
+          who: whoText(g),
+          pantry: pantryMatches(
+            { id: g.dishId, name: g.name, description: g.description, instructions: g.instructions, tags: g.tags },
+            pantry,
+            today,
+          ).map((h) => {
+            const qty = fmtQuantity(h.item.quantity ?? null, h.item.unit ?? null)
+            return qty ? `${h.item.name} ${qty}` : h.item.name
+          }),
+        }))}
+      />
     )
 
   return (

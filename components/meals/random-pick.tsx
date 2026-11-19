@@ -1,20 +1,40 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Dices, Minus, Plus, RefreshCw } from 'lucide-react'
+import { Dices, Leaf, Minus, Plus, RefreshCw, Sparkles } from 'lucide-react'
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Segmented } from '@/components/ui/segmented'
 import { List } from '@/components/ui/list'
 import { DishRow } from '@/components/dishes/dish-card'
 import { useT } from '@/components/i18n-provider'
 import { addOrders } from '@/lib/actions/meals'
+import { smartPick } from '@/lib/actions/recommend'
 import { tagStats } from '@/lib/dish-categories'
 import type { Dish } from '@/lib/db/schema'
 
 type RDish = Pick<Dish, 'id' | 'name' | 'description' | 'imagePath' | 'tags'>
 
 const ANY = '__any__'
+const MODE_KEY = 'gancook.random.mode'
+
+type Mode = 'random' | 'smart'
+type SmartInfo = {
+  reasons: Record<string, string>
+  summary: string
+  seasonLabel: string
+  source: 'llm' | 'rules'
+  llmFailed: boolean
+}
+
+function readMode(): Mode {
+  try {
+    return localStorage.getItem(MODE_KEY) === 'smart' ? 'smart' : 'random'
+  } catch {
+    return 'random'
+  }
+}
 
 /** 加权不放回抽样：最近吃过的菜权重降到 1/4，换换口味 */
 function weightedSample<T extends { id: string }>(
@@ -75,8 +95,49 @@ export function RandomPick({
   }
   const [plan, setPlan] = useState<Record<string, number>>(initialPlan)
   const [result, setResult] = useState<RDish[]>([])
+  const [mode, setModeState] = useState<Mode>('random')
+  const [smart, setSmart] = useState<SmartInfo | null>(null)
+  const [thinking, startThinking] = useTransition()
+  const requestSeq = useRef(0)
+  const byId = useMemo(() => new Map(dishes.map((d) => [d.id, d])), [dishes])
+
+  // 智能：交给服务端（时令 + 库存 + 最近吃过；配了 LLM 就让 LLM 挑）
+  const think = (p = plan) => {
+    const seq = ++requestSeq.current
+    setError('')
+    startThinking(async () => {
+      const res = await smartPick(mealId, p, [...pickedIds])
+      if (seq !== requestSeq.current) return
+      if (!res.ok) {
+        setError(res.error)
+        return
+      }
+      setResult(res.picks.map((x) => byId.get(x.id)).filter((d): d is RDish => !!d))
+      setSmart({
+        reasons: Object.fromEntries(res.picks.map((x) => [x.id, x.reason])),
+        summary: res.summary,
+        seasonLabel: res.seasonLabel,
+        source: res.source,
+        llmFailed: res.llmFailed,
+      })
+    })
+  }
+
+  const run = (p = plan, m = mode) => (m === 'smart' ? think(p) : roll(p))
+
+  const setMode = (m: Mode) => {
+    setModeState(m)
+    try {
+      localStorage.setItem(MODE_KEY, m)
+    } catch {
+      // 无痕模式等：不记住也没关系
+    }
+    run(plan, m)
+  }
 
   const roll = (p = plan) => {
+    requestSeq.current++
+    setSmart(null)
     const chosen = new Set<string>()
     const out: RDish[] = []
     const weight = (d: RDish) => (recent.has(d.id) ? 0.25 : 1)
@@ -102,7 +163,7 @@ export function RandomPick({
   const setCount = (tag: string, delta: number) => {
     const next = { ...plan, [tag]: Math.max(0, Math.min(6, (plan[tag] ?? 0) + delta)) }
     setPlan(next)
-    roll(next)
+    run(next)
   }
 
   const orderAll = () =>
@@ -131,7 +192,11 @@ export function RandomPick({
       open={open}
       onOpenChange={(v) => {
         setOpen(v)
-        if (v) roll()
+        if (v) {
+          const m = readMode()
+          setModeState(m)
+          run(plan, m)
+        }
       }}
     >
       <DialogTrigger asChild>
@@ -146,7 +211,19 @@ export function RandomPick({
       </DialogTrigger>
       <DialogContent title={t('random.title')} className="max-h-[90dvh] overflow-y-auto">
         <div className="space-y-4">
-          <p className="-mt-2 text-sm text-secondary">{t('random.sub')}</p>
+          <Segmented
+            value={mode}
+            onChange={setMode}
+            layoutId="random-mode"
+            className="-mt-1"
+            options={[
+              { value: 'random', label: t('random.modeRandom') },
+              { value: 'smart', label: t('random.modeSmart') },
+            ]}
+          />
+          <p className="-mt-1 text-sm text-secondary">
+            {mode === 'smart' ? t('random.subSmart') : t('random.sub')}
+          </p>
 
           <div className="mf-rail -mx-5 px-5">
             {rows.map((tag) => {
@@ -183,14 +260,47 @@ export function RandomPick({
             })}
           </div>
 
-          {result.length === 0 ? (
+          {mode === 'smart' && smart && !thinking && result.length > 0 && (
+            <div className="mf-tonal space-y-1 rounded-2xl px-4 py-3">
+              <p className="relative flex items-center gap-1.5 text-sm font-semibold text-accent">
+                {smart.source === 'llm' ? (
+                  <Sparkles className="h-4 w-4" />
+                ) : (
+                  <Leaf className="h-4 w-4" />
+                )}
+                {smart.seasonLabel}
+                <span className="font-normal text-secondary">
+                  · {smart.source === 'llm' ? t('random.byLlm') : t('random.byRules')}
+                </span>
+              </p>
+              {smart.summary && (
+                <p className="relative text-sm text-ink">{smart.summary}</p>
+              )}
+              {smart.llmFailed && (
+                <p className="relative text-xs text-secondary">{t('random.llmFailed')}</p>
+              )}
+            </div>
+          )}
+
+          {thinking ? (
+            <p className="mf-inset flex items-center justify-center gap-2 rounded-2xl p-5 text-sm text-secondary">
+              <Sparkles className="h-4 w-4 animate-pulse text-accent" />
+              {t('random.thinking')}
+            </p>
+          ) : result.length === 0 ? (
             <p className="mf-inset rounded-2xl p-5 text-center text-sm text-secondary">
               {t('random.none')}
             </p>
           ) : (
             <List>
               {result.map((d) => (
-                <DishRow key={d.id} dish={d} />
+                <DishRow
+                  key={d.id}
+                  dish={d}
+                  subtitle={
+                    mode === 'smart' ? smart?.reasons[d.id] || undefined : undefined
+                  }
+                />
               ))}
             </List>
           )}
@@ -198,14 +308,19 @@ export function RandomPick({
           {error && <p className="text-sm text-danger">{error}</p>}
 
           <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={() => roll()}>
+            <Button
+              variant="secondary"
+              className="flex-1"
+              disabled={thinking}
+              onClick={() => run()}
+            >
               <RefreshCw className="h-4 w-4" />
               {t('random.reroll')}
             </Button>
             <Button
               className="flex-1"
               loading={pending}
-              disabled={result.length === 0}
+              disabled={result.length === 0 || thinking}
               onClick={orderAll}
             >
               {t('random.orderAll', { n: result.length })}

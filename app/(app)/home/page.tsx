@@ -1,4 +1,4 @@
-import { Plus, UtensilsCrossed, ArrowRight } from 'lucide-react'
+import { Plus, UtensilsCrossed, ArrowRight, AlarmClock, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { requireUser, listMembers } from '@/lib/auth/user'
 import { getSettings } from '@/lib/settings'
@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { MealCard } from '@/components/meals/meal-card'
 import { CreateMealDialog } from '@/components/meals/create-meal-dialog'
+import { listPantry } from '@/lib/services/pantry'
+import { expiryState } from '@/lib/pantry'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,6 +48,11 @@ export default async function HomePage() {
     me.id,
   )
   const members = new Map(listMembers().map((m) => [m.id, m.name]))
+  // 冰箱里快过期的：首页提醒一下，点菜时可用「随便来点 → 智能」优先用掉
+  const expiring = listPantry().filter((i) => {
+    const st = expiryState(i.expiresOn, today).state
+    return st === 'soon' || st === 'expired'
+  })
 
   return (
     <>
@@ -61,6 +68,24 @@ export default async function HomePage() {
           </p>
         </div>
       </div>
+
+      {expiring.length > 0 && (
+        <Link
+          href="/pantry"
+          className="mf-pressable mb-6 flex items-center gap-3 rounded-[22px] bg-[#e0a13a]/12 px-4 py-3"
+        >
+          <AlarmClock className="h-[18px] w-[18px] shrink-0 text-[#b3791f]" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-[#8a5c12]">
+              {t('pantry.urgentTitle', { n: expiring.length })}
+            </span>
+            <span className="block truncate text-xs text-[#8a5c12]/80">
+              {expiring.map((i) => i.name).join(t('common.listSep'))}
+            </span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-[#8a5c12]/50" />
+        </Link>
+      )}
 
       <div className="mb-3 flex items-center justify-between">
         <h2 className="mf-section text-[15px] text-ink">{t('home.upcoming')}</h2>
