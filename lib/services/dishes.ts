@@ -105,15 +105,35 @@ export async function updateDishFor(
       return { ok: false, code: 'statusInvalid' }
     patch.status = raw.status
   }
-  const editsContent = Object.keys(n.value).length > 0 || raw.imageUrl !== undefined
-  if (editsContent && !canEdit(user, dish)) return { ok: false, code: 'onlyOwnerDishEdit' }
+  // 「GET 回来改几个字段再整个 PATCH 回去」时，imageUrl 会是原样的相对地址：视为不变
+  const changesImage =
+    raw.imageUrl !== undefined && !isCurrentImage(raw.imageUrl, dish.imagePath)
+  const changesContent = (Object.keys(n.value) as (keyof typeof n.value)[]).some(
+    (k) => JSON.stringify(n.value[k] ?? null) !== JSON.stringify(dish[k] ?? null),
+  )
+  if ((changesContent || changesImage) && !canEdit(user, dish))
+    return { ok: false, code: 'onlyOwnerDishEdit' }
 
-  const img = raw.imageUrl !== undefined ? await imageFromUrl(raw.imageUrl) : null
+  const img = changesImage ? await imageFromUrl(raw.imageUrl) : null
   if (img && !img.ok) return img
   if (img) patch.imagePath = img.value
-  const row = db.update(dishes).set(patch).where(eq(dishes.id, id)).returning().get()
+  // 没有任何可改的字段（如 {} 或只有未知字段）：原样返回
+  if (Object.keys(patch).length === 0) return { ok: true, value: dish }
+
+  let row: Dish
+  try {
+    row = db.update(dishes).set(patch).where(eq(dishes.id, id)).returning().get()
+  } catch {
+    if (img?.value) await deleteImage(img.value)
+    return { ok: false, code: 'saveFailed' }
+  }
   if (img && dish.imagePath && dish.imagePath !== img.value) await deleteImage(dish.imagePath)
   return { ok: true, value: row }
+}
+
+function isCurrentImage(url: unknown, imagePath: string | null): boolean {
+  if (url === null || url === '') return imagePath === null
+  return typeof url === 'string' && imagePath !== null && url === `/api/uploads/${imagePath}`
 }
 
 /** 删除：点过的菜只下架（保留历史），没点过的真删 */

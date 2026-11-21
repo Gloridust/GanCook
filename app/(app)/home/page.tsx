@@ -50,6 +50,7 @@ export default async function HomePage() {
   const members = new Map(listMembers().map((m) => [m.id, m.name]))
   // 冰箱里快过期的：首页提醒一下，点菜时可用「随便来点 → 智能」优先用掉
   const expiring = listPantry().filter((i) => {
+    if (i.quantity === 0) return false
     const st = expiryState(i.expiresOn, today).state
     return st === 'soon' || st === 'expired'
   })

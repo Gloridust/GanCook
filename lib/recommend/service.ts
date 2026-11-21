@@ -130,6 +130,7 @@ export async function smartRecommend(input: {
         maxTokens: 1200,
         timeoutMs: RECOMMEND_LLM_TIMEOUT_MS,
         temperature: 0.7,
+        jsonMode: true,
       })
       const parsed = parseRecommendOutput(raw, {
         idMap: prompt.idMap,

@@ -101,10 +101,11 @@ export function tick(): TickResult {
     .where(
       and(eq(meals.status, 'ordering'), lte(meals.orderDeadline, now)),
     )
-    .returning({ id: meals.id })
+    .returning({ id: meals.id, diningTime: meals.diningTime })
     .all()
-    .map((r) => r.id)
   const started = startedIds.length
+  // 停机期间错过的饭局（开饭时间已过）不再推「点菜结束」，否则开机会收到昨天的菜单
+  const cookingNotifyIds = startedIds.filter((r) => r.diningTime > now).map((r) => r.id)
 
   // 4) 用餐结束 → 已完成（含错过截止仍在 ordering 的）
   const finished = db
@@ -121,7 +122,7 @@ export function tick(): TickResult {
   // 推送放在最后、且不等待：网络慢不拖住调度
   for (const id of createdIds) notifyMealInBackground('meal_created', id)
   for (const id of remindIds) notifyMealInBackground('deadline_soon', id)
-  for (const id of startedIds) notifyMealInBackground('cooking', id)
+  for (const id of cookingNotifyIds) notifyMealInBackground('cooking', id)
 
   return { created, started, finished }
 }

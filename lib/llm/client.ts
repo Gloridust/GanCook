@@ -12,8 +12,7 @@ import { RECIPE_LLM_TIMEOUT_MS } from './timeouts'
 
 const MAX_LLM_RESPONSE = 256 * 1024
 
-// 不支持 response_format 的服务（部分自建 / 旧版兼容网关、推理模型）会回 400/422，
-// 记住后同一进程内不再带这个参数，省一次失败请求
+// 确认不支持 response_format 的服务（带上就 400/422、去掉就成功）记在进程内，之后直接不带
 const g = globalThis as unknown as { __gancookNoJsonMode?: Set<string> }
 const noJsonMode = (g.__gancookNoJsonMode ??= new Set<string>())
 
@@ -23,11 +22,15 @@ export type ChatJsonOptions = {
   maxTokens: number
   timeoutMs: number
   temperature?: number
+  /**
+   * 请求 JSON 模式（response_format: json_object）。默认关闭：菜谱导入沿用原来的请求方式，
+   * 只有新功能显式开启。服务不支持时自动去掉重试。
+   */
+  jsonMode?: boolean
 }
 
 /**
  * 通用「要一个 JSON 对象」的对话调用（OpenAI 兼容 chat/completions）。
- * 优先开启 JSON 模式（response_format: json_object），服务不支持时自动去掉重试。
  * 返回模型正文，由调用方解析校验。
  */
 export async function chatJson(
@@ -61,19 +64,22 @@ export async function chatJson(
     return content
   }
 
-  if (noJsonMode.has(target)) return call(false)
+  if (!options.jsonMode || noJsonMode.has(target)) return call(false)
+
+  let first: string
   try {
-    return await call(true)
+    first = await call(true)
   } catch (error) {
-    if (
-      error instanceof LlmHttpError &&
-      (error.status === 400 || error.status === 422)
-    ) {
-      noJsonMode.add(target)
-      return call(false)
-    }
-    throw error
+    const maybeUnsupported =
+      error instanceof LlmHttpError && (error.status === 400 || error.status === 422)
+    if (!maybeUnsupported) throw error
+    // 400/422 也可能是模型名、上下文长度等其他原因：去掉后真成功了，才认定是不支持 JSON 模式
+    const content = await call(false)
+    noJsonMode.add(target)
+    return content
   }
+  // 部分推理模型开了 JSON 模式会回空正文：不带参数再试一次
+  return first.trim() ? first : call(false)
 }
 
 export async function extractRecipeWithLlm(

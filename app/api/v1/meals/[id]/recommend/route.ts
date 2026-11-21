@@ -1,5 +1,5 @@
 import { fail, ok, readJson, withApi } from '@/lib/api/http'
-import { getMeal } from '@/lib/meals'
+import { getMeal, myOrderQuantities } from '@/lib/meals'
 import { smartRecommend } from '@/lib/recommend/service'
 
 export const dynamic = 'force-dynamic'
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
  * 智能配一桌（不会自动下单）：
  * { plan?: { "荤菜": 1, "素菜": 1, "汤": 1, "__any__": 0 }, locale?: "zh" | "en" }
  */
-export const POST = withApi<{ id: string }>(async (req, _user, { id }) => {
+export const POST = withApi<{ id: string }>(async (req, user, { id }) => {
   const meal = getMeal(id)
   if (!meal) return fail('mealNotFound')
   const body = (await readJson(req)) ?? {}
@@ -23,7 +23,8 @@ export const POST = withApi<{ id: string }>(async (req, _user, { id }) => {
   const res = await smartRecommend({
     meal,
     plan,
-    excludeIds: [],
+    // 令牌所属成员已点的菜不再推荐（和网页端一致）
+    excludeIds: Object.keys(myOrderQuantities(id, user.id)),
     locale: body.locale === 'en' ? 'en' : 'zh',
   })
   return ok(res)

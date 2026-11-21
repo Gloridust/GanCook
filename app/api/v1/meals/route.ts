@@ -6,14 +6,31 @@ import { createMealFor, type CreateMealInput } from '@/lib/services/meals'
 
 export const dynamic = 'force-dynamic'
 
-/** 饭局列表：?status=active（点菜中/做饭中，默认）| history（已完成/已取消）&limit=20 */
+/**
+ * 饭局列表：?status=active（点菜中/做饭中，默认）| history（已完成/已取消）
+ * history 支持 &limit=20 与 &before=<上一页返回的 nextBefore> 翻页
+ */
 export const GET = withApi((req) => {
   const url = new URL(req.url)
   if (url.searchParams.get('status') === 'history') {
     const limit = Math.max(1, Math.min(100, Number(url.searchParams.get('limit')) || 20))
-    const { items, hasMore } = listHistoryMeals({ limit, includeEmpty: false })
+    // 游标形如 "<diningTime>:<id>"，直接用上一页返回的 nextBefore
+    const beforeRaw = url.searchParams.get('before')
+    let before: { diningTime: number; id: string } | undefined
+    if (beforeRaw !== null) {
+      const m = /^(\d+):([\w-]{1,64})$/.exec(beforeRaw)
+      if (!m) return fail('beforeInvalid')
+      before = { diningTime: Number(m[1]), id: m[2] }
+    }
+    const { items, hasMore } = listHistoryMeals({ limit, includeEmpty: false, before })
     return Response.json(
-      { data: items.map(mealOut), hasMore },
+      {
+        data: items.map(mealOut),
+        hasMore,
+        nextBefore: hasMore
+          ? `${items[items.length - 1].diningTime}:${items[items.length - 1].id}`
+          : null,
+      },
       { headers: { 'Cache-Control': 'no-store' } },
     )
   }

@@ -6,6 +6,7 @@ import { getSettings } from '@/lib/settings'
 import { getMeal } from '@/lib/meals'
 import { localDateTimeToSec, nowSec } from '@/lib/time'
 import { notifyMealInBackground } from '@/lib/notify/dispatch'
+import { isValidDate, isValidTime } from '@/lib/date-input'
 
 /**
  * 饭局 / 点菜的业务逻辑。Server Action 与开放 API 共用；
@@ -15,8 +16,6 @@ export type ServiceResult<T = void> =
   | { ok: true; value: T }
   | { ok: false; code: string }
 
-const reDate = /^\d{4}-\d{2}-\d{2}$/
-const reTime = /^\d{2}:\d{2}$/
 export const MAX_QTY = 99
 
 export type CreateMealInput = {
@@ -30,8 +29,8 @@ export type CreateMealInput = {
 export function createMealFor(user: User, input: CreateMealInput): ServiceResult<Meal> {
   if (!['breakfast', 'lunch', 'dinner'].includes(input.mealType))
     return { ok: false, code: 'mealType' }
-  if (!reDate.test(input.date)) return { ok: false, code: 'dateFmt' }
-  if (!reTime.test(input.diningTime) || !reTime.test(input.deadline))
+  if (!isValidDate(String(input.date))) return { ok: false, code: 'dateFmt' }
+  if (!isValidTime(String(input.diningTime)) || !isValidTime(String(input.deadline)))
     return { ok: false, code: 'timeFmt' }
 
   const tz = getSettings().timezone

@@ -27,6 +27,7 @@ const MESSAGES: Record<string, string> = {
   dateInvalid: 'expiresOn must be a valid YYYY-MM-DD date',
   locationInvalid: 'location must be fridge, freezer or pantry',
   quantityRequired: 'quantity is required',
+  beforeInvalid: 'before must be the nextBefore value from the previous page',
 }
 
 const STATUS: Record<string, number> = {

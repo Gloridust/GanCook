@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlarmClock, Minus, Plus, Refrigerator, Search, Snowflake, Warehouse } from 'lucide-react'
 import { List } from '@/components/ui/list'
@@ -40,15 +40,22 @@ export function PantryBoard({ items, today }: { items: PantryItem[]; today: stri
   const [editing, setEditing] = useState<PantryItem | null>(null)
   const [adding, setAdding] = useState<PantryLocation | null>(null)
   const [query, setQuery] = useState('')
+  // 点 +/- 时先本地显示新数量；请求都回来、服务端数据刷新后以服务端为准
   const [qtyOverride, setQtyOverride] = useState<Record<string, number>>({})
+  const inFlight = useRef(0)
   const [, startTransition] = useTransition()
+  useEffect(() => {
+    if (inFlight.current === 0) setQtyOverride({})
+  }, [items])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return q ? items.filter((i) => `${i.name} ${i.note ?? ''}`.toLowerCase().includes(q)) : items
   }, [items, query])
 
+  // 已用完（数量 0）的不算「快过期」
   const urgent = items.filter((i) => {
+    if (i.quantity === 0) return false
     const s = expiryState(i.expiresOn, today).state
     return s === 'soon' || s === 'expired'
   })
@@ -57,9 +64,12 @@ export function PantryBoard({ items, today }: { items: PantryItem[]; today: stri
     const cur = qtyOverride[item.id] ?? item.quantity ?? 0
     const next = Math.max(0, Math.round((cur + delta) * 100) / 100)
     setQtyOverride((m) => ({ ...m, [item.id]: next }))
+    inFlight.current++
     startTransition(async () => {
-      await adjustPantryQuantity(item.id, delta)
-      router.refresh()
+      await adjustPantryQuantity(item.id, delta).finally(() => {
+        inFlight.current--
+      })
+      if (inFlight.current === 0) router.refresh()
     })
   }
 
@@ -139,7 +149,14 @@ export function PantryBoard({ items, today }: { items: PantryItem[]; today: stri
                       <div key={item.id} className="mf-row">
                         <button
                           type="button"
-                          onClick={() => setEditing(item)}
+                          onClick={() =>
+                            // 编辑表单以「当前显示的数量」为准，避免刚点过 +/- 又被旧值覆盖
+                            setEditing(
+                              item.id in qtyOverride
+                                ? { ...item, quantity: qtyOverride[item.id] }
+                                : item,
+                            )
+                          }
                           className={`min-w-0 flex-1 text-left ${out ? 'opacity-50' : ''}`}
                         >
                           <span className="flex items-center gap-2">
@@ -210,7 +227,6 @@ export function PantryBoard({ items, today }: { items: PantryItem[]; today: stri
             if (!o) {
               setEditing(null)
               setAdding(null)
-              setQtyOverride({})
             }
           }}
         />

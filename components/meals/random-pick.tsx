@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Dices, Leaf, Minus, Plus, RefreshCw, Sparkles } from 'lucide-react'
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
@@ -97,17 +97,40 @@ export function RandomPick({
   const [result, setResult] = useState<RDish[]>([])
   const [mode, setModeState] = useState<Mode>('random')
   const [smart, setSmart] = useState<SmartInfo | null>(null)
-  const [thinking, startThinking] = useTransition()
+  // 只跟踪「最新一次」智能请求：切回随机或发起新请求后，旧请求的结果和加载态都作废
+  const [thinkingSeq, setThinkingSeq] = useState<number | null>(null)
+  const thinking = thinkingSeq !== null
   const requestSeq = useRef(0)
+  const thinkTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const byId = useMemo(() => new Map(dishes.map((d) => [d.id, d])), [dishes])
 
-  // 智能：交给服务端（时令 + 库存 + 最近吃过；配了 LLM 就让 LLM 挑）
-  const think = (p = plan) => {
+  const cancelThinking = () => {
+    requestSeq.current++
+    if (thinkTimer.current) clearTimeout(thinkTimer.current)
+    thinkTimer.current = null
+    setThinkingSeq(null)
+  }
+  useEffect(() => () => {
+    if (thinkTimer.current) clearTimeout(thinkTimer.current)
+  }, [])
+
+  // 智能：交给服务端（时令 + 库存 + 最近吃过；配了 LLM 就让 LLM 挑）。
+  // 连点 +/- 时稍等再发，避免每下都调一次 LLM
+  const think = (p = plan, delayMs = 0) => {
+    if (thinkTimer.current) clearTimeout(thinkTimer.current)
     const seq = ++requestSeq.current
     setError('')
-    startThinking(async () => {
-      const res = await smartPick(mealId, p, [...pickedIds])
+    setThinkingSeq(seq)
+    thinkTimer.current = setTimeout(async () => {
+      thinkTimer.current = null
+      let res: Awaited<ReturnType<typeof smartPick>>
+      try {
+        res = await smartPick(mealId, p, [...pickedIds])
+      } catch {
+        res = { ok: false, error: t('random.llmFailed') }
+      }
       if (seq !== requestSeq.current) return
+      setThinkingSeq(null)
       if (!res.ok) {
         setError(res.error)
         return
@@ -120,10 +143,11 @@ export function RandomPick({
         source: res.source,
         llmFailed: res.llmFailed,
       })
-    })
+    }, delayMs)
   }
 
-  const run = (p = plan, m = mode) => (m === 'smart' ? think(p) : roll(p))
+  const run = (p = plan, m = mode, delayMs = 0) =>
+    m === 'smart' ? think(p, delayMs) : roll(p)
 
   const setMode = (m: Mode) => {
     setModeState(m)
@@ -136,7 +160,7 @@ export function RandomPick({
   }
 
   const roll = (p = plan) => {
-    requestSeq.current++
+    cancelThinking()
     setSmart(null)
     const chosen = new Set<string>()
     const out: RDish[] = []
@@ -163,7 +187,7 @@ export function RandomPick({
   const setCount = (tag: string, delta: number) => {
     const next = { ...plan, [tag]: Math.max(0, Math.min(6, (plan[tag] ?? 0) + delta)) }
     setPlan(next)
-    run(next)
+    run(next, mode, 500)
   }
 
   const orderAll = () =>
@@ -192,6 +216,7 @@ export function RandomPick({
       open={open}
       onOpenChange={(v) => {
         setOpen(v)
+        if (!v) cancelThinking()
         if (v) {
           const m = readMode()
           setModeState(m)
