@@ -56,6 +56,22 @@ function aliases(name: string): string[] {
   return group && n !== '蛋' ? group : [n]
 }
 
+/**
+ * 调味料、葱姜蒜这类几乎每道菜做法里都会出现，按做法全文匹配会让「家里有盐」刷屏、
+ * 把所有菜的分数一起抬高。它们（以及单字名称）只在菜名里出现时才算用得上。
+ */
+const STAPLES = new Set([
+  '盐', '糖', '油', '醋', '水', '葱', '姜', '蒜', '酒', '面粉', '淀粉',
+  '白糖', '冰糖', '红糖', '酱油', '生抽', '老抽', '料酒', '蚝油', '香油', '芝麻油',
+  '食用油', '花生油', '菜籽油', '橄榄油', '味精', '鸡精', '胡椒', '胡椒粉', '花椒',
+  '八角', '桂皮', '香叶', '辣椒面', '豆瓣酱', '大葱', '小葱', '香葱', '生姜', '大蒜', '蒜头',
+  'salt', 'sugar', 'oil', 'vinegar', 'soy sauce', 'pepper', 'garlic', 'ginger', 'scallion', 'water',
+])
+
+function nameOnly(alias: string): boolean {
+  return [...alias].length <= 1 || STAPLES.has(alias)
+}
+
 export function dishText(d: RecDish): string {
   return [d.name, d.description ?? '', (d.instructions ?? '').slice(0, 3000)]
     .join('\n')
@@ -83,7 +99,8 @@ export function pantryMatches(
     const daysLeft = item.expiresOn ? daysBetween(today, item.expiresOn) : null
     if (daysLeft !== null && daysLeft < 0) continue
     if (item.quantity === 0) continue
-    if (aliases(item.name).some((a) => text.includes(a)))
+    const name = dish.name.toLowerCase()
+    if (aliases(item.name).some((a) => (nameOnly(a) ? name : text).includes(a)))
       out.push({ item, daysLeft })
   }
   return out
