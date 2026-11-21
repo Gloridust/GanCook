@@ -124,6 +124,8 @@ export async function smartRecommend(input: {
         recentNames: recent.map((r) => r.name),
         excludeIds: exclude,
       })
+      // 没有任何候选（配方里的分类都没菜可选）：不必问模型
+      if (prompt.idMap.size === 0) throw new Error('NO_CANDIDATES')
       const raw = await chatJson(config, {
         system: prompt.system,
         user: prompt.user,
@@ -140,6 +142,7 @@ export async function smartRecommend(input: {
       llmPicks = parsed.picks.filter((p) => !exclude.has(p.id))
       summary = parsed.summary
     } catch (error) {
+      if ((error as Error).message === 'NO_CANDIDATES') return empty
       llmFailed = true
       console.warn('[recommend] LLM 推荐失败，改用规则：', (error as Error).message)
     }
