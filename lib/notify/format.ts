@@ -103,6 +103,9 @@ export function buildMessage(event: NotifyEvent | 'test', ctx: NotifyContext): N
   return { title, text: lines.join('\n'), link: ctx.link }
 }
 
+/** 群机器人落款（含关键词「干饭」，中英文推送都带） */
+export const BOT_SIGNATURE = '—— 干饭厨子 GanCook'
+
 export type NotifyRequest = {
   url: string
   body: string
@@ -118,7 +121,8 @@ export function buildRequest(
   ctx: NotifyContext,
 ): NotifyRequest {
   const headers = { 'Content-Type': 'application/json; charset=utf-8' }
-  const full = `${msg.title}\n${msg.text}`
+  // 群机器人消息统一带落款：钉钉 / 飞书的「自定义关键词」安全设置填「干饭」即可放行所有消息
+  const full = `${msg.title}\n${msg.text}\n\n${BOT_SIGNATURE}`
   let body: unknown
   switch (type) {
     case 'wecom':

@@ -8,14 +8,13 @@ import { List, Row } from '@/components/ui/list'
 import { IconChip } from '@/components/ui/icon-chip'
 import { useT } from '@/components/i18n-provider'
 import { createApiToken, deleteApiToken } from '@/lib/actions/api-tokens'
-import { dayjs } from '@/lib/time'
 
 type TokenRow = {
   id: string
   name: string
   prefix: string
-  lastUsedAt: number | null
-  createdAt: number
+  /** 已按家庭时区格式化 */
+  lastUsed: string | null
 }
 
 function CopyButton({ text }: { text: string }) {
@@ -101,9 +100,7 @@ export function ApiTokens({ tokens, origin }: { tokens: TokenRow[]; origin: stri
               }
               title={tk.name}
               subtitle={`${tk.prefix}… · ${
-                tk.lastUsedAt
-                  ? t('api.lastUsed', { time: dayjs.unix(tk.lastUsedAt).format('M/D HH:mm') })
-                  : t('api.neverUsed')
+                tk.lastUsed ? t('api.lastUsed', { time: tk.lastUsed }) : t('api.neverUsed')
               }`}
               trailing={
                 <button

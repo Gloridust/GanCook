@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  BOT_SIGNATURE,
   buildMessage,
   buildRequest,
   responseError,
@@ -66,4 +67,19 @@ test('channel URLs must be plain http(s)', () => {
   assert.equal(validChannelUrl('ftp://x'), null)
   assert.equal(validChannelUrl('https://user:pw@x.com'), null)
   assert.equal(validChannelUrl('not a url'), null)
+})
+
+test('every bot message carries the 干饭 keyword so DingTalk/Feishu keyword security passes', () => {
+  for (const event of ['meal_created', 'deadline_soon', 'cooking', 'test'] as const) {
+    for (const locale of ['zh', 'en'] as const) {
+      const c = { ...ctx, locale }
+      const msg = buildMessage(event, c)
+      for (const type of ['wecom', 'dingtalk', 'feishu'] as const) {
+        const body = JSON.parse(buildRequest(type, 'https://x', msg, event, c).body)
+        const text: string = body.text?.content ?? body.content?.text
+        assert.ok(text.includes('干饭'), `${type}/${event}/${locale} lacks keyword`)
+        assert.ok(text.endsWith(BOT_SIGNATURE))
+      }
+    }
+  }
 })

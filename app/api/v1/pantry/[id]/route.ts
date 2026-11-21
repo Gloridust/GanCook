@@ -18,6 +18,8 @@ export const PATCH = withApi<P>(async (req, _user, { id }) => {
   if (!existing) return fail('notFound')
   const body = await readJson(req)
   if (!body) return fail('badJson')
+  // location 不能清空：传 null 视为不改（其余字段传 null 表示清空）
+  if (body.location === null) delete body.location
   const input = normalizePantryInput({ ...existing, ...body })
   if (!input.ok) return fail(input.error)
   const row = updatePantryItem(id, input.value)

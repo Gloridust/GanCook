@@ -45,6 +45,16 @@ export async function adjustPantryQuantity(id: string, delta: number): Promise<A
   return { ok: true }
 }
 
+/** 「用完了」：数量归 0 但保留条目（常备的调料、食材下次补货直接 +） */
+export async function markPantryUsedUp(id: string): Promise<ActionResult> {
+  const t = await getT()
+  const me = await getCurrentUser()
+  if (!me) return { ok: false, error: t('err.loginRequired') }
+  if (!updatePantryItem(id, { quantity: 0 })) return { ok: false, error: t('pantry.err.notFound') }
+  revalidatePath('/pantry')
+  return { ok: true }
+}
+
 export async function removePantryItem(id: string): Promise<ActionResult> {
   const t = await getT()
   const me = await getCurrentUser()

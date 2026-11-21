@@ -2,6 +2,7 @@
  * 家里库存：输入校验与展示用的纯函数（服务端 / 客户端 / 开放 API 共用）。
  */
 import { daysBetween } from '@/lib/recommend/rules'
+import { isValidDate } from '@/lib/date-input'
 
 export const PANTRY_LOCATIONS = ['fridge', 'freezer', 'pantry'] as const
 export type PantryLocation = (typeof PANTRY_LOCATIONS)[number]
@@ -26,15 +27,6 @@ export type PantryInputError =
   | 'dateInvalid'
   | 'locationInvalid'
 
-const reDate = /^\d{4}-\d{2}-\d{2}$/
-
-function validDate(s: string): boolean {
-  if (!reDate.test(s)) return false
-  const [y, m, d] = s.split('-').map(Number)
-  const dt = new Date(Date.UTC(y, m - 1, d))
-  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d
-}
-
 /** 校验并规整库存输入；raw 来自表单或 API JSON */
 export function normalizePantryInput(
   raw: Record<string, unknown>,
@@ -58,7 +50,7 @@ export function normalizePantryInput(
   let expiresOn: string | null = null
   if (raw.expiresOn) {
     const s = String(raw.expiresOn).trim()
-    if (!validDate(s)) return { ok: false, error: 'dateInvalid' }
+    if (!isValidDate(s)) return { ok: false, error: 'dateInvalid' }
     expiresOn = s
   }
 

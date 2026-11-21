@@ -109,3 +109,20 @@ test('parseRecommendOutput rejects non-JSON output', () => {
     /LLM_INVALID_JSON/,
   )
 })
+
+test('staples and single-character items only count when they are in the dish name', () => {
+  const braise: RecDish = {
+    id: 'x',
+    name: '红烧肉',
+    tags: ['荤菜'],
+    instructions: '加盐、生抽、料酒、葱姜蒜，再放两个鸡蛋',
+  }
+  const pantry = [{ name: '盐' }, { name: '生抽' }, { name: '葱' }, { name: '鸡蛋' }]
+  // 鸡蛋（非调味料、两个字）照常按做法匹配；盐 / 生抽 / 葱 不算
+  assert.deepEqual(pantryMatches(braise, pantry, '2026-11-20').map((h) => h.item.name), ['鸡蛋'])
+  const scallionPancake: RecDish = { id: 'y', name: '葱油饼', tags: ['主食'] }
+  assert.deepEqual(pantryMatches(scallionPancake, pantry, '2026-11-20').map((h) => h.item.name), ['葱'])
+  // 「蛋」作为鸡蛋的别名只看菜名
+  const soup: RecDish = { id: 'z', name: '紫菜汤', tags: ['汤'], instructions: '打入蛋液' }
+  assert.equal(pantryMatches(soup, [{ name: '鸡蛋' }], '2026-11-20').length, 0)
+})

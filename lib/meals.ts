@@ -1,5 +1,5 @@
 import 'server-only'
-import { eq, and, desc, asc, inArray, sql, exists } from 'drizzle-orm'
+import { eq, and, or, desc, asc, inArray, sql, exists, lt } from 'drizzle-orm'
 import { db } from '@/lib/db/client'
 import { meals, orders, dishes, users, reviews } from '@/lib/db/schema'
 import type { Meal } from '@/lib/db/schema'
@@ -126,16 +126,22 @@ const hasOrders = exists(
 export function listHistoryMeals(opts: {
   limit: number
   includeEmpty: boolean
+  /** 分页游标：上一页最后一顿的 (diningTime, id)，只取排在它之后的 */
+  before?: { diningTime: number; id: string }
 }): { items: Meal[]; hasMore: boolean } {
+  const b = opts.before
   const where = and(
     inArray(meals.status, ['done', 'cancelled']),
     opts.includeEmpty ? undefined : hasOrders,
+    b
+      ? or(lt(meals.diningTime, b.diningTime), and(eq(meals.diningTime, b.diningTime), lt(meals.id, b.id)))
+      : undefined,
   )
   const rows = db
     .select()
     .from(meals)
     .where(where)
-    .orderBy(desc(meals.diningTime))
+    .orderBy(desc(meals.diningTime), desc(meals.id))
     .limit(opts.limit + 1)
     .all()
   return { items: rows.slice(0, opts.limit), hasMore: rows.length > opts.limit }

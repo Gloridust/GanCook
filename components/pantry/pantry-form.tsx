@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Segmented } from '@/components/ui/segmented'
 import { useLocale, useT } from '@/components/i18n-provider'
-import { removePantryItem, savePantryItem } from '@/lib/actions/pantry'
+import { markPantryUsedUp, removePantryItem, savePantryItem } from '@/lib/actions/pantry'
 import {
   PANTRY_UNITS_EN,
   PANTRY_UNITS_ZH,
@@ -61,8 +61,17 @@ export function PantryForm({
     })
   }
 
-  const remove = () => {
+  const usedUp = () => {
     if (!item) return
+    startDeleting(async () => {
+      const res = await markPantryUsedUp(item.id)
+      if (res.ok) onOpenChange(false)
+      else setError(res.error)
+    })
+  }
+
+  const remove = () => {
+    if (!item || !confirm(t('pantry.deleteConfirm', { name: item.name }))) return
     startDeleting(async () => {
       const res = await removePantryItem(item.id)
       if (res.ok) onOpenChange(false)
@@ -197,11 +206,17 @@ export function PantryForm({
               <Button
                 type="button"
                 variant="secondary"
+                size="icon"
                 loading={deleting}
                 onClick={remove}
-                aria-label={t('pantry.usedUp')}
+                aria-label={t('common.delete')}
+                title={t('common.delete')}
               >
                 <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+            {item && item.quantity !== 0 && (
+              <Button type="button" variant="secondary" loading={deleting} onClick={usedUp}>
                 {t('pantry.usedUp')}
               </Button>
             )}
